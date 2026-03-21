@@ -237,6 +237,47 @@ Requisitos:
 Critérios:
 - Dados persistem entre execuções
 
+## Prompt 6.4 — Camera System
+
+Implemente um sistema de câmera 2D que siga o player em Unity.
+
+Contexto:
+- Jogo roguelike 2D top-down
+- Câmera deve ser simples (sem Cinemachine)
+- Projeto ainda está em fase inicial
+
+Requisitos:
+- A câmera deve seguir o player automaticamente
+- Manter o player centralizado na tela
+- Movimento suave (interpolação / smoothing)
+- Não alterar eixo Z da câmera
+- Código desacoplado (não embutir lógica no Player)
+
+Criar:
+- CameraFollow.cs
+
+Detalhes técnicos:
+- Usar Transform do player como target
+- Usar Lerp ou SmoothDamp para suavizar movimento
+- Executar movimento em LateUpdate
+
+Critérios de aceite:
+- Câmera segue o player continuamente
+- Movimento não é travado (não “teleporta”)
+- Player permanece visível e centralizado
+- Não há jitter ou tremedeira
+
+Entrega esperada:
+- Código completo
+- Onde anexar o script (Main Camera)
+- Como configurar o target no Inspector
+- Como testar no Play Mode
+
+Evitar:
+- Cinemachine
+- Sistemas complexos
+- Overengineering
+
 ---
 
 # 🗺️ FASE 7 — Dungeon

@@ -3,18 +3,22 @@
 ## 💡 Princípios Fundamentais
 
 ### 1. Gestão de Contexto
+
 - Use `/new` entre etapas
 - Evite contexto acumulado
 
 ### 2. Execução Incremental
+
 - Sempre implementar UMA tarefa por vez
 - Validar antes de avançar
 
 ### 3. Código Simples > Código Inteligente
+
 - Evitar overengineering
 - Não criar abstrações prematuras
 
 ### 4. Separação Clara
+
 - Sistema ≠ Conteúdo ≠ Polish
 
 ---
@@ -74,22 +78,28 @@ A especificação deve ser EXECUTÁVEL e detalhada.
 Inclua:
 
 ### Arquivos
+
 - Liste cada arquivo a ser criado com caminho completo (ex: Assets/Scripts/Player/PlayerController.cs)
 
 ### Estrutura
+
 - Defina classes e responsabilidades
 - Não criar abstrações desnecessárias
 
 ### Lógica
+
 - Descreva o fluxo do sistema passo a passo
 
 ### Pseudocódigo
+
 - Inclua lógica detalhada suficiente para implementação direta
 
 ### Integração
+
 - Explique como conectar os scripts na Unity (GameObject, Inspector, etc)
 
 Regras:
+
 - Código simples
 - Nada genérico demais
 - Nada de arquitetura exagerada
@@ -119,7 +129,7 @@ Entrega esperada:
 
 1. Código completo dos arquivos
 2. Nome correto dos arquivos
-3. Explicação de onde colocar cada script na Unity dando update no arquivo SETUP.md
+3. Explicação de onde colocar cada script na Unity dando update no arquivo SETUP.md da parte fase explicando passo a passo de como implementar no unity
 4. Como configurar no Inspector
 5. Como testar a funcionalidade
 
