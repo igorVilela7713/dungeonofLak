@@ -7,6 +7,11 @@ public class Door : MonoBehaviour
     
     public bool IsOpen => _isOpen;
     
+    private void Awake()
+    {
+        Open();
+    }
+    
     public void Open()
     {
         _collider.enabled = false;

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class WeaponController : MonoBehaviour
 {
@@ -11,19 +12,40 @@ public class WeaponController : MonoBehaviour
     
     private bool _isAttacking;
     private float _cooldownTimer;
+    private InputAction _attackAction;
     
     public bool IsAttacking => _isAttacking;
+    
+    private void Awake()
+    {
+        _attackAction = new InputAction("Attack", InputActionType.Button);
+        _attackAction.AddBinding("<Mouse>/leftButton");
+        _attackAction.AddBinding("<Keyboard>/enter");
+        _attackAction.AddBinding("<Gamepad>/buttonWest");
+    }
+    
+    private void OnEnable()
+    {
+        _attackAction.Enable();
+        _attackAction.performed += OnAttackPerformed;
+    }
+    
+    private void OnDisable()
+    {
+        _attackAction.performed -= OnAttackPerformed;
+        _attackAction.Disable();
+    }
+    
+    private void OnAttackPerformed(InputAction.CallbackContext context)
+    {
+        Attack();
+    }
     
     private void Update()
     {
         if (_cooldownTimer > 0)
         {
             _cooldownTimer -= Time.deltaTime;
-        }
-        
-        if (Input.GetButtonDown("Fire1"))
-        {
-            Attack();
         }
     }
     

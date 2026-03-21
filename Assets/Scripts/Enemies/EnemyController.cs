@@ -62,7 +62,7 @@ public class EnemyController : MonoBehaviour, IDamageable
     
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.gameObject.layer != LayerMask.NameToLayer("Player")) return;
+        if (other.gameObject.layer != LayerMask.NameToLayer("player")) return;
         if (_attackCooldownTimer > 0) return;
         
         IDamageable damageable = other.GetComponent<IDamageable>();

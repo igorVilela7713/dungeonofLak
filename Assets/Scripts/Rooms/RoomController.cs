@@ -11,23 +11,36 @@ public class RoomController : MonoBehaviour
     
     [Header("References")]
     [SerializeField] private Transform _player;
+    [SerializeField] private Transform _roomCenter;
     
     private int _enemiesAlive;
     private bool _isActive;
+    private bool _doorsClosed;
     
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (_isActive) return;
-        if (other.gameObject.layer != LayerMask.NameToLayer("Player")) return;
+        if (other.gameObject.layer != LayerMask.NameToLayer("player")) return;
         
         _isActive = true;
-        CloseDoors();
         SpawnEnemies();
+    }
+    
+    private void Update()
+    {
+        if (!_isActive || _doorsClosed) return;
+        if (_player == null || _roomCenter == null) return;
+        
+        if (Vector2.Distance(_player.position, _roomCenter.position) < 1f)
+        {
+            _doorsClosed = true;
+            CloseDoors();
+        }
     }
     
     private void SpawnEnemies()
     {
-        if (_spawnPoints == null) return;
+        if (_spawnPoints == null || _enemyPrefab == null) return;
         
         foreach (Transform point in _spawnPoints)
         {
@@ -53,12 +66,14 @@ public class RoomController : MonoBehaviour
         if (_enemiesAlive <= 0)
         {
             _isActive = false;
+            _doorsClosed = false;
             OpenDoors();
         }
     }
     
     private void CloseDoors()
     {
+        if (_doors == null) return;
         foreach (Door door in _doors)
         {
             door.Close();
@@ -67,6 +82,7 @@ public class RoomController : MonoBehaviour
     
     private void OpenDoors()
     {
+        if (_doors == null) return;
         foreach (Door door in _doors)
         {
             door.Open();
