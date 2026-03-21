@@ -32,6 +32,6 @@ public class PlayerController : MonoBehaviour
     
     private void Move(Vector2 direction)
     {
-        _rigidbody.velocity = direction.normalized * _moveSpeed;
+        _rigidbody.linearVelocity = direction.normalized * _moveSpeed;
     }
 }

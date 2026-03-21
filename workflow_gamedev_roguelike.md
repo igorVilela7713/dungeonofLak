@@ -119,7 +119,7 @@ Entrega esperada:
 
 1. Código completo dos arquivos
 2. Nome correto dos arquivos
-3. Explicação de onde colocar cada script na Unity
+3. Explicação de onde colocar cada script na Unity dando update no arquivo SETUP.md
 4. Como configurar no Inspector
 5. Como testar a funcionalidade
 
