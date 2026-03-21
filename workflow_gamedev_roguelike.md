@@ -2,45 +2,60 @@
 
 ## 💡 Princípios Fundamentais
 
-1. **Gestão de Contexto**
-- Use `/clear` entre etapas
-- Evite acúmulo de contexto desnecessário
+### 1. Gestão de Contexto
+- Use `/new` entre etapas
+- Evite contexto acumulado
 
-2. **Execução Incremental**
+### 2. Execução Incremental
 - Sempre implementar UMA tarefa por vez
 - Validar antes de avançar
 
-3. **Código Simples > Código Inteligente**
+### 3. Código Simples > Código Inteligente
 - Evitar overengineering
 - Não criar abstrações prematuras
 
-4. **Separação Clara**
+### 4. Separação Clara
 - Sistema ≠ Conteúdo ≠ Polish
 
 ---
 
 # 🔄 Fluxo de Trabalho (3 Etapas)
 
+---
+
 ## 1. Pesquisa e PRD
 
 ### Prompt
+
 """
-Precisamos implementar a seguinte funcionalidade em um jogo roguelike 2D na Unity:
+Estamos desenvolvendo um jogo roguelike 2D na Unity (C#).
+
+Precisamos implementar a seguinte funcionalidade:
 
 [TAREFA]
 
-Antes de codar:
+Antes de codar, faça uma análise completa:
 
-1. Analise como essa funcionalidade normalmente é implementada em Unity 2D
-2. Identifique os principais componentes necessários (scripts, prefabs, etc)
-3. Busque boas práticas para evitar overengineering
-4. Gere um PRD.md com:
-   - objetivo
-   - componentes necessários
-   - estrutura sugerida
-   - riscos
+1. Analise como essa funcionalidade deve ser implementada em Unity 2D
+2. Liste os componentes necessários:
+   - scripts
+   - prefabs
+   - componentes Unity (Rigidbody2D, Collider, etc)
+3. Sugira a abordagem mais simples possível (evitando overengineering)
+4. Considere que o projeto ainda está em fase inicial (não criar sistemas complexos)
+5. Se aplicável, identifique dependências com sistemas futuros (ex: combate, inimigos, etc)
+6. Busque padrões de implementação similares que já usamos para mantermos a consistência.
+7. Pesquise na internet a documentação oficial de [BIBLIOTECA/TECNOLOGIA] e busque exemplos de melhores práticas no Stack Overflow ou GitHub.
 
-Código deve ser simples e direto.
+Ao final gere um arquivo `PRD.md` com:
+
+- Objetivo da funcionalidade
+- Componentes necessários
+- Estrutura sugerida
+- Fluxo básico de funcionamento
+- Riscos ou pontos de atenção
+
+Seja direto e prático.
 """
 
 ---
@@ -48,18 +63,39 @@ Código deve ser simples e direto.
 ## 2. Especificação (SPEC)
 
 ### Prompt
+
 """
-Leia o PRD.md e gere um SPEC.md.
+Leia o arquivo `PRD.md`.
+
+Agora, aja como um Engenheiro de Software Sênior focado em Unity 2D e crie um `SPEC.md`.
+
+A especificação deve ser EXECUTÁVEL e detalhada.
 
 Inclua:
 
-- Arquivos a serem criados (com caminho)
-- Estrutura de classes
-- Responsabilidades de cada script
-- Fluxo lógico do sistema
-- Pseudocódigo
+### Arquivos
+- Liste cada arquivo a ser criado com caminho completo (ex: Assets/Scripts/Player/PlayerController.cs)
 
-Evite complexidade desnecessária.
+### Estrutura
+- Defina classes e responsabilidades
+- Não criar abstrações desnecessárias
+
+### Lógica
+- Descreva o fluxo do sistema passo a passo
+
+### Pseudocódigo
+- Inclua lógica detalhada suficiente para implementação direta
+
+### Integração
+- Explique como conectar os scripts na Unity (GameObject, Inspector, etc)
+
+Regras:
+- Código simples
+- Nada genérico demais
+- Nada de arquitetura exagerada
+- Pensar em um projeto pequeno/indie
+
+Seja específico e direto.
 """
 
 ---
@@ -67,129 +103,25 @@ Evite complexidade desnecessária.
 ## 3. Implementação
 
 ### Prompt
-"""
-Leia o SPEC.md e implemente.
 
-Regras:
-- Código simples e modular
-- Sem overengineering
+"""
+Leia o arquivo `SPEC.md` e implemente a funcionalidade.
+
+Regras obrigatórias:
+
 - Seguir exatamente o SPEC
-- Se houver dúvida, perguntar antes
+- Código simples e legível
+- Evitar overengineering
+- Não criar sistemas genéricos
+- Não adicionar features extras
 
-Explique rapidamente as decisões.
-"""
+Entrega esperada:
 
----
+1. Código completo dos arquivos
+2. Nome correto dos arquivos
+3. Explicação de onde colocar cada script na Unity
+4. Como configurar no Inspector
+5. Como testar a funcionalidade
 
-# 🚀 Prompts Iniciais (Execução Direta)
-
-## 🎯 Prompt 1 — Estrutura do Projeto
-
-"""
-Crie a estrutura inicial de um projeto Unity 2D roguelike.
-
-Pastas:
-- Scenes
-- Scripts
-- Prefabs
-- Art
-- Animations
-- UI
-- Audio
-- Data
-
-Explique rapidamente o propósito de cada uma.
-"""
-
----
-
-## 🎯 Prompt 2 — Player Movement
-
-"""
-Implemente um PlayerController 2D.
-
-Requisitos:
-- Movimento horizontal e vertical
-- Rigidbody2D
-- Velocidade configurável
-
-Critérios:
-- Movimento fluido
-- Sem atravessar colisores
-
-Código simples.
-"""
-
----
-
-## 🎯 Prompt 3 — Player Health
-
-"""
-Crie um sistema de vida para o player.
-
-Requisitos:
-- Classe PlayerHealth
-- HP inicial configurável
-- Método TakeDamage
-- Detectar morte
-
-Critérios:
-- HP reduz corretamente
-- Morte detectada
-
-Sem UI ainda.
-"""
-
----
-
-## 🎯 Prompt 4 — Combate (Espada)
-
-"""
-Implemente combate básico com espada.
-
-Requisitos:
-- Input de ataque
-- Hitbox temporária
-- Cooldown
-- Dano aplicado
-
-Critérios:
-- Player ataca
-- Enemy recebe dano
-- Sem spam infinito
-
-Código simples.
-"""
-
----
-
-## 🎯 Prompt 5 — Enemy Básico
-
-"""
-Crie um inimigo básico.
-
-Requisitos:
-- Seguir player
-- Causar dano ao encostar
-- Receber dano
-- Morrer
-
-Critérios:
-- Enemy funcional
-"""
-
----
-
-## 🎯 Prompt 6 — Sala de Combate
-
-"""
-Implemente RoomController.
-
-Requisitos:
-- Spawn de inimigos
-- Porta trava durante combate
-
-Critérios:
-- Porta abre ao limpar sala
-- Combate inicia corretamente
+Se houver qualquer ambiguidade, pergunte antes de implementar.
 """
