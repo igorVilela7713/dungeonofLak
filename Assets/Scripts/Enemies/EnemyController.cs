@@ -23,6 +23,11 @@ public class EnemyController : MonoBehaviour, IDamageable
         _currentHealth = _maxHealth;
     }
     
+    public void Initialize(Transform player)
+    {
+        _player = player;
+    }
+    
     private void Update()
     {
         if (_isDead) return;
