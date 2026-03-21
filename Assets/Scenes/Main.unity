@@ -435,7 +435,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7671179420079522619, guid: 0b67c60948bbebd42926f2266416682a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -1
+      value: -0.98
       objectReference: {fileID: 0}
     - target: {fileID: 7671179420079522619, guid: 0b67c60948bbebd42926f2266416682a, type: 3}
       propertyPath: m_LocalPosition.z
@@ -650,6 +650,10 @@ PrefabInstance:
       propertyPath: _roomCenter
       value: 
       objectReference: {fileID: 715020187}
+    - target: {fileID: 6122999883098740024, guid: f857303a1806466408b7e706038e1c1a, type: 3}
+      propertyPath: _enemyPrefab
+      value: 
+      objectReference: {fileID: 2225336838839417664, guid: ad714b182552d8e41a4c99418dae8009, type: 3}
     - target: {fileID: 6548499718195268690, guid: f857303a1806466408b7e706038e1c1a, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0.386
