@@ -15,7 +15,6 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private LayerMask _groundLayer;
 
     [Header("Combat")]
-    [SerializeField] private float _knockbackForce = 5f;
     [SerializeField] private float _invincibilityDuration = 0.5f;
 
     private Rigidbody2D _rigidbody;

@@ -7,6 +7,12 @@ public class EnemyController : MonoBehaviour, IDamageable
     [Header("Movement Settings")]
     [SerializeField] private float _moveSpeed = 2f;
 
+    [Header("Jump Settings")]
+    [SerializeField] private float _jumpForce = 8f;
+    [SerializeField] private Transform _groundCheck;
+    [SerializeField] private float _groundCheckRadius = 0.15f;
+    [SerializeField] private LayerMask _groundLayer;
+
     [Header("Combat Settings")]
     [SerializeField] private int _maxHealth = 30;
     [SerializeField] private int _damageToPlayer = 10;
@@ -18,6 +24,7 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     private int _currentHealth;
     private bool _isDead;
+    private bool _isGrounded;
     private float _attackCooldownTimer;
     private Rigidbody2D _rigidbody;
     private SpriteRenderer _spriteRenderer;
@@ -30,8 +37,16 @@ public class EnemyController : MonoBehaviour, IDamageable
 
         if (_rigidbody != null)
         {
-            _rigidbody.gravityScale = 0;
+            _rigidbody.gravityScale = 3f;
             _rigidbody.freezeRotation = true;
+        }
+
+        if (_groundCheck == null)
+        {
+            GameObject go = new GameObject("GroundCheck");
+            go.transform.SetParent(transform);
+            go.transform.localPosition = new Vector3(0f, -0.5f, 0f);
+            _groundCheck = go.transform;
         }
     }
 
@@ -49,6 +64,8 @@ public class EnemyController : MonoBehaviour, IDamageable
             _attackCooldownTimer -= Time.deltaTime;
         }
 
+        _isGrounded = Physics2D.OverlapCircle(_groundCheck.position, _groundCheckRadius, _groundLayer);
+
         ChasePlayer();
     }
 
@@ -56,8 +73,13 @@ public class EnemyController : MonoBehaviour, IDamageable
     {
         if (_player == null) return;
 
-        Vector2 direction = (_player.position - transform.position).normalized;
-        _rigidbody.linearVelocity = direction * _moveSpeed;
+        float directionX = Mathf.Sign(_player.position.x - transform.position.x);
+        _rigidbody.linearVelocity = new Vector2(directionX * _moveSpeed, _rigidbody.linearVelocity.y);
+
+        if (_player.position.y > transform.position.y + 1f && _isGrounded)
+        {
+            _rigidbody.linearVelocity = new Vector2(_rigidbody.linearVelocity.x, _jumpForce);
+        }
     }
 
     public void TakeDamage(int amount)

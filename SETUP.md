@@ -133,32 +133,48 @@ Player (Layer = Player)
 ```
 Criar GameObject "Enemy"
   → SpriteRenderer (sprite de placeholder, Layer = Enemy)
-  → Rigidbody2D (Gravity Scale = 0, Freeze Rotation Z)
-  → CircleCollider2D (isTrigger = true)
+  → Rigidbody2D (Gravity Scale = 3, Freeze Rotation Z)
+  → CircleCollider2D (isTrigger = true) — para detectar contato com player
+  → CircleCollider2D (isTrigger = false) — para colidir com o chão
   → EnemyController.cs
     - _player: deixar vazio (RoomController configura via Initialize)
+  → GroundCheck (empty child, posição nos pés do enemy)
 ```
 
 **No Inspector:**
 - Layer: Enemy
-- CircleCollider2D:
+- CircleCollider2D (trigger):
   - **isTrigger = true** (obrigatório para detectar contato com player)
   - Ajustar tamanho ao sprite
+- CircleCollider2D (física):
+  - **isTrigger = false** (obrigatório para colidir com o chão)
+  - Ajustar tamanho ao sprite
 - Rigidbody2D:
-  - Gravity Scale: 0
+  - Gravity Scale: 3
   - Freeze Rotation Z: ✓
   - Collision Detection: Continuous (opcional, evita tunelamento)
 - EnemyController:
   - _moveSpeed: 2
+  - _jumpForce: 8
+  - _groundCheck: arrastar GroundCheck (child)
+  - _groundCheckRadius: 0.15
+  - _groundLayer: marcar layer Ground
   - _maxHealth: 30
   - _damageToPlayer: 10
   - _attackCooldown: 1
-  - _knockbackForce: 5 (NOVO)
+  - _knockbackForce: 5
+
+**GroundCheck (Enemy):**
+- Criar Empty GameObject como filho do Enemy
+- Renomear para "GroundCheck"
+- Posicionar na base do enemy (nos pés)
+- Arrastar no campo _groundCheck do EnemyController
 
 **Atenção:** Enemy precisa de Rigidbody2D para:
 1. `OnTriggerEnter2D` ser chamado (Unity requer Rigidbody2D em pelo menos um dos objetos)
 2. Movimento via `_rigidbody.linearVelocity` funcionar
 3. Knockback poder ser aplicado no futuro
+4. Gravidade puxar o enemy para o chão
 
 ---
 
@@ -275,7 +291,9 @@ Scene "Main"
 | Player não pula | Verificar GroundCheck posição, _groundLayer marcado com Ground |
 | Player sobe infinitamente | Verificar Gravity Scale = 3 no Rigidbody2D |
 | Inimigo não segue | Verificar _player configurado no Initialize |
-| Inimigo não se move | Verificar Rigidbody2D no Enemy prefab (Gravity Scale = 0) |
+| Inimigo flutua | Verificar Gravity Scale = 3 no Rigidbody2D, _groundLayer marcado com Ground |
+| Inimigo cai pelo chão | Verificar se existe CircleCollider2D com isTrigger=false para física |
+| Inimigo não pula | Verificar GroundCheck posição, _groundLayer marcado com Ground, _jumpForce configurado |
 | Hitbox não detecta | Verificar isTrigger=true, Layer correto |
 | Porta não bloqueia | Verificar _collider atribuído, isTrigger=false |
 | Cena não reinicia | Verificar GameManager, PlayerHealth.OnDeath |

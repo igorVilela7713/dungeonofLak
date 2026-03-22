@@ -7,12 +7,14 @@ public class WeaponController : MonoBehaviour
     [SerializeField] private int _damage = 10;
     [SerializeField] private float _attackCooldown = 0.3f;
     [SerializeField] private float _attackDuration = 0.1f;
+    [SerializeField] private float _knockbackForce = 2f;
     [SerializeField] private GameObject _hitboxPrefab;
     [SerializeField] private Transform _player;
     
     private bool _isAttacking;
     private float _cooldownTimer;
     private InputAction _attackAction;
+    private GameObject _activeHitbox;
     
     public bool IsAttacking => _isAttacking;
     
@@ -56,22 +58,31 @@ public class WeaponController : MonoBehaviour
         
         _isAttacking = true;
         SpawnHitbox();
-        
         StartCoroutine(AttackRoutine());
     }
     
     private System.Collections.IEnumerator AttackRoutine()
     {
         yield return new WaitForSeconds(_attackDuration);
+        if (_activeHitbox != null)
+        {
+            Destroy(_activeHitbox);
+            _activeHitbox = null;
+        }
         _isAttacking = false;
         _cooldownTimer = _attackCooldown;
     }
     
     private void SpawnHitbox()
     {
+        if (_activeHitbox != null)
+        {
+            Destroy(_activeHitbox);
+        }
+
         Vector3 spawnPos = _player.position + _player.right * 0.8f;
-        GameObject hitbox = Instantiate(_hitboxPrefab, spawnPos, Quaternion.identity, _player);
-        SwordHitbox swordHitbox = hitbox.GetComponent<SwordHitbox>();
+        _activeHitbox = Instantiate(_hitboxPrefab, spawnPos, Quaternion.identity, _player);
+        SwordHitbox swordHitbox = _activeHitbox.GetComponent<SwordHitbox>();
         swordHitbox.Initialize(this);
     }
     
@@ -81,6 +92,13 @@ public class WeaponController : MonoBehaviour
         if (damageable != null)
         {
             damageable.TakeDamage(_damage);
+
+            Rigidbody2D rb = other.GetComponent<Rigidbody2D>();
+            if (rb != null)
+            {
+                Vector2 knockDir = (other.transform.position - _player.position).normalized;
+                rb.AddForce(knockDir * _knockbackForce, ForceMode2D.Impulse);
+            }
         }
     }
 }
