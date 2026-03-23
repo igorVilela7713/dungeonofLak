@@ -337,47 +337,157 @@ Evitar:
 
 ---
 
-# 🗺️ FASE 7 — Dungeon
+# 🗺️ FASE 7 — Dungeon Procedural e Progressão de Andares
+
+## 🎯 Objetivo
+Implementar a estrutura principal da dungeon com:
+- geração procedural de andares
+- progressão entre floors
+- salas especiais (boss e reward)
+- base para scaling de dificuldade
+
+---
 
 ## Prompt 7.1 — FloorManager
 
-Crie sistema de andares.
+Crie um sistema de andares para a dungeon.
 
-Requisitos:
+### Contexto
+- Jogo roguelike 2D
+- Dungeon com 15 andares
+- Andares 5, 10 e 15 são boss floors
 
-- Controlar andar atual
+### Requisitos
+- Criar `FloorManager`
+- Controlar o andar atual
+- Método para avançar andar
+- Identificar tipo do andar:
+  - normal
+  - boss
+  - reward area (após boss)
+- Após boss, ir para reward area antes do próximo andar
 
-Critérios:
-
+### Critérios
 - Andar incrementa corretamente
+- Boss floors detectados corretamente (5, 10, 15)
+- Fluxo: boss → reward → próximo andar
+
+### Evitar
+- Lógica espalhada em múltiplos scripts
+- Misturar com combate ou UI
 
 ---
 
-## Prompt 7.2 — Room System
+## Prompt 7.2 — Procedural Room System
 
-Crie sistema de salas.
+Crie um sistema procedural de salas para andares normais.
 
-Requisitos:
+### Contexto
+- Cada andar normal deve ser gerado proceduralmente
+- Prioridade: simplicidade e estabilidade
+- Pode usar salas pré-fabricadas (prefabs)
 
-- Múltiplas salas conectadas
+### Requisitos
+- Criar `DungeonGenerator` ou `RoomSystem`
+- Gerar múltiplas salas conectadas
+- Tipos mínimos de sala:
+  - start
+  - combat
+  - exit
+- Garantir caminho válido do início ao fim
+- Permitir navegação entre salas
 
-Critérios:
+### Critérios
+- Cada andar gera layout diferente
+- Sempre existe caminho jogável
+- Player consegue navegar entre salas
 
-- Player navega entre salas
+### Escopo inicial
+- Grid simples
+- Conexão lógica entre salas
+- Sem algoritmo complexo
+
+### Evitar
+- Procedural complexo demais
+- Mapas impossíveis
+- Misturar com spawn ou boss logic
 
 ---
 
-## Prompt 7.3 — Difficulty Scaling
+## Prompt 7.3 — Boss Floor System
 
-Implemente escala de dificuldade.
+Crie sistema de andares de boss.
 
-Requisitos:
+### Contexto
+- Andares 5, 10 e 15 são boss floors
+- Não usam geração procedural normal
+- Devem carregar arena específica
 
-- Aumentar HP/dano por andar
+### Requisitos
+- Detectar boss floors
+- Carregar ou gerar arena de boss
+- Criar fluxo pós-boss
+- Encaminhar para reward area
+- Preparar suporte para múltiplos bosses
 
-Critérios:
+### Critérios
+- Boss floors funcionam corretamente
+- Não usam sistema de salas normal
+- Após vitória → reward area
 
-- Dificuldade aumenta progressivamente
+### Evitar
+- Misturar com dungeon generator
+- Hardcode espalhado
+
+---
+
+## Prompt 7.4 — Reward / Upgrade Area
+
+Crie área de recompensa pós-boss.
+
+### Contexto
+- Área segura após boss
+- Sem combate
+- Upgrade ainda não definido
+
+### Requisitos
+- Criar `RewardArea`
+- Player entra após boss
+- Estrutura para upgrade futuro
+- Pode usar placeholder
+
+### Critérios
+- Área sem combate
+- Fluxo correto após boss
+- Pronto para expansão futura
+
+### Evitar
+- Sistema completo de upgrade agora
+- Misturar com hub
+
+---
+
+## Prompt 7.5 — Difficulty Scaling
+
+Implemente escala de dificuldade por andar.
+
+### Contexto
+- Dificuldade aumenta conforme o player avança
+- Afeta inimigos normais e bosses
+
+### Requisitos
+- Aumentar HP e dano por andar
+- Sistema centralizado
+- Permitir ajuste fácil (multiplicadores)
+
+### Critérios
+- Dificuldade progressiva
+- Valores fáceis de balancear
+- Funciona para normal + boss
+
+### Evitar
+- Fórmulas complexas
+- Lógica espalhada em vários scripts
 
 ---
 
