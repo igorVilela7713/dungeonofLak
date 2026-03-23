@@ -1,4 +1,4 @@
-# Setup Unity — Fase 2 + Fase 3 + Fase 4 + Fase 5
+# Setup Unity — Fase 2 + Fase 3 + Fase 4 + Fase 5 + Fase 6
 
 ## 1. Layers
 
@@ -302,3 +302,264 @@ Scene "Main"
 | Player leva dano múltiplo | Verificar i-frames: check IsInvincible no EnemyController |
 | Enemy não para ao morrer | Verificar _rigidbody.linearVelocity = Vector2.zero no DieSequence |
 | Inimigos se empurram | Verificar Collision Matrix: enemy↔enemy = NÃO |
+
+---
+
+## 12. Fase 6 — Hub
+
+O Hub é a "base" do jogador. Dali o player pode falar com NPCs, salvar o progresso e entrar na dungeon.
+
+---
+
+### 12.1 Criar a Cena Hub
+
+1. No Unity: **File → New Scene → Basic (Built-in)**
+2. A cena abre vazia (só com Main Camera e Directional Light)
+3. **File → Save As** → navegar até `Assets/Scenes/`
+4. Salvar como `Hub.unity`
+5. **File → Build Settings → Add Open Scenes** — a cena Hub aparece na lista
+6. Garantir que `Main.unity` também está na lista
+7. Reordenar: **Hub no Index 0**, Main no Index 1
+
+> O jogo sempre abre a cena do Index 0. Agora vai abrir o Hub.
+
+---
+
+### 12.2 Montar o Chão e Paredes
+
+No Unity, abra a cena `Hub.unity`.
+
+**Opção A — Tilemap (recomendado):**
+1. Clique direito na Hierarchy → **2D Object → Tilemap → Rectangular**
+2. Abra a janela **Window → 2D → Tile Palette**
+3. Arraste os tiles do SunnyLand para criar o chão
+4. Crie uma segunda Tilemap para as paredes/bordas (para o player não sair da área)
+5. No Inspector de cada Tilemap: **Layer = Ground** (se precisar de colisão)
+6. Adicione um **TilemapCollider2D** no Tilemap das paredes
+
+**Opção B — Sprites simples:**
+1. Crie um Sprite com **SpriteRenderer** como chão (Layer = Ground)
+2. Adicione **BoxCollider2D** nas bordas como paredes
+3. Ajuste o tamanho no Inspector
+
+**Paredes invisíveis (alternativa):**
+1. Crie Empty GameObjects nas bordas
+2. Adicione **BoxCollider2D** em cada um (isTrigger = false)
+3. Estique os colliders para cobrir cada lado da área jogável
+
+---
+
+### 12.3 Instanciar o Player
+
+1. No Project window, encontre o **Player.prefab** em `Assets/Prefabs/`
+2. **Arraste o prefab para a cena Hub**
+3. Posicione onde o player deve aparecer (ex: centro da cena)
+4. Crie um Empty GameObject chamado **"PlayerSpawn"** na mesma posição — serve como referência de onde o player aparece
+
+> O Player já vem com PlayerController, PlayerHealth e WeaponController. No Hub, o ataque não atrapalha.
+
+---
+
+### 12.4 Criar a UI de Diálogo
+
+Esta é a interface que mostra o texto dos NPCs.
+
+**Passo 1 — Canvas:**
+1. Clique direito na Hierarchy → **UI → Canvas**
+2. No Inspector do Canvas:
+   - Canvas Scaler → UI Scale Mode: **Scale With Screen Size**
+   - Reference Resolution: **1920 × 1080**
+   - Match Width Or Height: **0.5**
+   - Render Mode: **Screen Space - Overlay** (padrão)
+
+**Passo 2 — DialoguePanel:**
+1. Clique direito no Canvas → **UI → Panel**
+2. Renomear para **"DialoguePanel"**
+3. No Inspector:
+   - Rect Transform: Anchor **bottom center** (arrastar no ícone de ancoragem)
+   - Width: **800**, Height: **200**
+   - Pos X: 0, Pos Y: 200 (aproximado)
+   - Cor de fundo (Image → Color): preto com **Alpha ~0.8** (preto semi-transparente)
+4. **Desativar o DialoguePanel** (desmarcar a caixinha ao lado do nome no Inspector, ou clicar no checkmark no topo do objeto)
+
+**Passo 3 — DialogueText:**
+1. Clique direito no DialoguePanel → **UI → Text - TextMeshPro**
+2. Renomear para **"DialogueText"**
+3. No Inspector do TextMeshPro:
+   - Font Size: **24**
+   - Color: **branco**
+   - Alignment: centro horizontal, centro vertical
+   - Rect Transform: clicar no ícone de anchor (quadrado) → segurar Alt e clicar em **Stretch** (última opção, canto inferior direito) para preencher o painel
+   - Margem: ajustar os offsets para dar padding (ex: Left: 20, Top: 20, Right: 20, Bottom: 20)
+
+**Passo 4 — DialogueUI script:**
+1. Clique direito na Hierarchy → **Create Empty**
+2. Renomear para **"DialogueUI"**
+3. No Inspector: **Add Component → DialogueUI**
+4. Arrastar no campo `_dialoguePanel`: o **DialoguePanel** (o GameObject do painel)
+5. Arrastar no campo `_dialogueText`: o **DialogueText** (o componente TextMeshProUGUI)
+
+---
+
+### 12.5 Criar o NPC
+
+Este NPC só fala com o player — não salva nada.
+
+1. Clique direito na Hierarchy → **Create Empty**
+2. Renomear para **"NPC"**
+3. No Inspector:
+   - Adicionar **SpriteRenderer** → arrastar um sprite placeholder do SunnyLand (ex: personagem NPC)
+   - Adicionar **BoxCollider2D**:
+     - **isTrigger = true** (obrigatório — sem isso o player não detecta)
+     - Ajustar Size para cobrir a área de interação (ex: X = 1, Y = 2)
+   - Adicionar **NPCInteractable**:
+     - `_dialogueText`: digitar o texto do NPC, ex: **"Bem-vindo a Mixhull! A dungeon fica ao leste."**
+4. Posicionar na área do Hub (ex: perto do centro)
+
+---
+
+### 12.6 Criar o NPC de Save
+
+Este NPC salva o progresso do player quando interage.
+
+1. Clique direito na Hierarchy → **Create Empty**
+2. Renomear para **"SaveNPC"**
+3. No Inspector:
+   - Adicionar **SpriteRenderer** → arrastar um sprite placeholder
+   - Adicionar **BoxCollider2D**:
+     - **isTrigger = true**
+     - Ajustar Size (ex: X = 1, Y = 2)
+   - Adicionar **SaveInteractable**:
+     - `_playerHealth`: arrastar o **Player** da cena → selecionar o componente **PlayerHealth** (expandir o Player na Hierarchy se necessário, arrastar o componente, não o GameObject)
+     - `_dialogueText`: digitar **"Progresso salvo!"** (ou o texto que quiser)
+4. Posicionar em outro ponto do Hub
+
+> O SaveInteractable salva `currentHealth` e `maxHealth` do PlayerHealth em `Application.persistentDataPath/save.json`.
+
+---
+
+### 12.7 Criar o Portal para a Dungeon
+
+1. Clique direito na Hierarchy → **Create Empty**
+2. Renomear para **"DungeonPortal"**
+3. No Inspector:
+   - Adicionar **SpriteRenderer** → arrastar um sprite placeholder de porta/portal
+   - Adicionar **BoxCollider2D**:
+     - **isTrigger = true**
+     - Ajustar Size (ex: X = 1.5, Y = 2)
+   - Adicionar **SceneTransition**:
+     - `_targetScene`: digitar **"Main"** (exatamente assim, com M maiúsculo, sem .unity)
+4. Posicionar em um canto da cena (ex: lado direito)
+5. **Verificar:** a cena "Main" precisa estar no Build Settings para a transição funcionar
+
+---
+
+### 12.8 Configurar a Câmera no Hub
+
+1. Selecionar a **Main Camera** na cena Hub
+2. No Inspector: **Add Component → CameraFollow**
+3. Arrastar no campo `_target`: o **Player** da cena
+4. `_smoothTime`: deixar **0.15** (padrão) ou ajustar a gosto
+5. Se quiser câmera seguindo na dungeon também: repetir os passos na cena Main
+
+---
+
+### 12.9 Criar o HubManager
+
+1. Clique direito na Hierarchy → **Create Empty**
+2. Renomear para **"HubManager"**
+3. No Inspector: **Add Component → HubManager**
+4. Arrastar no campo `_playerHealth`: o componente **PlayerHealth** do Player
+5. O HubManager carrega o save (se existir) quando a cena inicia
+
+---
+
+### 12.10 Configurar o GameManager na Dungeon
+
+1. Abrir a cena **Main** (dungeon)
+2. Selecionar o objeto **GameManager** na Hierarchy
+3. No Inspector:
+   - `_sceneName`: mudar de `"Main"` para **"Hub"**
+4. Agora quando o player morre na dungeon, volta para o Hub em vez de reiniciar a dungeon
+
+---
+
+### 12.11 Build Settings Final
+
+1. **File → Build Settings**
+2. Verificar que as cenas estão listadas na ordem:
+   - **Index 0:** `Assets/Scenes/Hub.unity` ← jogo começa aqui
+   - **Index 1:** `Assets/Scenes/Main.unity` ← dungeon
+3. Se Hub não estiver na lista: abrir a cena Hub → **Add Open Scenes**
+4. Se Main não estiver na lista: abrir a cena Main → **Add Open Scenes**
+
+---
+
+### 12.12 Como Testar em Play Mode
+
+Siga esta sequência para validar que tudo funciona:
+
+1. Abra a cena **Hub**
+2. Clique em **Play** no Unity
+3. O jogo abre no Hub — verify que o player aparece e se move
+4. Caminhe até o NPC → o painel de diálogo aparece com o texto
+5. Pressione **E** → o painel de diálogo some
+6. Caminhe até o DungeonPortal → a cena muda para a dungeon
+7. Gameplay normal na dungeon (movimentação, ataque, inimigos)
+8. Deixe o player morrer → a cena volta para o Hub
+9. Caminhe até o SaveNPC → pressione E → o texto "Progresso salvo!" aparece
+10. Verifique o save: `Application.persistentDataPath` → existe um arquivo `save.json` com os dados
+
+**Fluxo completo:** Hub → portal → dungeon → morrer → voltar ao Hub → salvar → reiniciar
+
+---
+
+### 12.13 Hierarquia da Cena Hub (referência)
+
+```
+Scene "Hub"
+├── Main Camera
+│   └── CameraFollow.cs (_target = Player)
+├── Player (Player.prefab)
+│   ├── PlayerController.cs
+│   ├── PlayerHealth.cs
+│   └── WeaponController.cs
+├── HubManager
+│   └── HubManager.cs (_playerHealth = Player)
+├── DialogueUI
+│   └── DialogueUI.cs
+│       └── Canvas
+│           └── DialoguePanel (desativado)
+│               └── DialogueText (TextMeshProUGUI)
+├── NPC
+│   ├── SpriteRenderer
+│   ├── BoxCollider2D (isTrigger = true)
+│   └── NPCInteractable.cs (_dialogueText = "...")
+├── SaveNPC
+│   ├── SpriteRenderer
+│   ├── BoxCollider2D (isTrigger = true)
+│   └── SaveInteractable.cs (_playerHealth = Player)
+├── DungeonPortal
+│   ├── SpriteRenderer
+│   ├── BoxCollider2D (isTrigger = true)
+│   └── SceneTransition.cs (_targetScene = "Main")
+├── PlayerSpawn (Empty, posição de spawn)
+└── Tilemap / Paredes
+```
+
+---
+
+### 12.14 Troubleshooting
+
+| Problema | Solução |
+|----------|---------|
+| Cena Hub não abre | Verificar Build Settings: Hub deve estar no Index 0 |
+| Transição não funciona | Verificar `_targetScene` = `"Main"` no SceneTransition, cena Main no Build Settings |
+| Diálogo não aparece | Verificar: DialogueUI.Instance existe na cena, DialoguePanel está desativado por default |
+| NPC não detecta player | Verificar: BoxCollider2D tem `isTrigger = true`, player está na Layer "player" (minúsculo) |
+| Save não persiste | Verificar: permissões de escrita em `Application.persistentDataPath` |
+| Câmera treme | Usar `LateUpdate`, `SmoothDamp`, verificar se tem Pixel Perfect Camera conflitando |
+| Player não spawna no Hub | Verificar: Player.prefab está na cena Hub, posição correta |
+| SaveNPC não salva | Verificar: `_playerHealth` está conectado ao PlayerHealth do Player no Inspector |
+| Erro NullReference no DialogueUI | Verificar: GameObject DialogueUI existe na cena com o script DialogueUI.cs |
+| Erro "Scene not found" | Verificar: nome da cena exato no `_targetScene`, cena listada no Build Settings |

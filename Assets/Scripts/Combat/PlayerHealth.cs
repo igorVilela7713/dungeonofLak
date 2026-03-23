@@ -28,6 +28,11 @@ public class PlayerHealth : MonoBehaviour, IDamageable
         }
     }
     
+    public void HealToFull()
+    {
+        _currentHealth = _maxHealth;
+    }
+
     private void Die()
     {
         OnDeath?.Invoke();
