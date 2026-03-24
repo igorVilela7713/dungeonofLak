@@ -19,6 +19,12 @@ public class EnemyController : MonoBehaviour, IDamageable
     [SerializeField] private float _attackCooldown = 1f;
     [SerializeField] private float _knockbackForce = 5f;
 
+    [Header("Elite")]
+    [SerializeField] private bool _isElite = false;
+
+    [Header("Rune Drop")]
+    [SerializeField] private int _runeValue = 1;
+
     [Header("References")]
     [SerializeField] private Transform _player;
 
@@ -28,6 +34,10 @@ public class EnemyController : MonoBehaviour, IDamageable
     private float _attackCooldownTimer;
     private Rigidbody2D _rigidbody;
     private SpriteRenderer _spriteRenderer;
+    private float _healthMultiplier = 1f;
+    private float _damageMultiplier = 1f;
+
+    public int RuneValue => _isElite ? _runeValue * 3 : _runeValue;
 
     private void Awake()
     {
@@ -48,11 +58,30 @@ public class EnemyController : MonoBehaviour, IDamageable
             go.transform.localPosition = new Vector3(0f, -0.5f, 0f);
             _groundCheck = go.transform;
         }
+
+        if (_isElite)
+        {
+            if (_spriteRenderer != null)
+            {
+                _spriteRenderer.color = Color.yellow;
+            }
+            transform.localScale *= 1.3f;
+        }
     }
 
     public void Initialize(Transform player)
     {
         _player = player;
+    }
+
+    public void ApplyDifficulty(float hpMult, float dmgMult, float runeMult = 1f)
+    {
+        _healthMultiplier = hpMult;
+        _damageMultiplier = dmgMult;
+        _maxHealth = Mathf.RoundToInt(_maxHealth * _healthMultiplier);
+        _currentHealth = _maxHealth;
+        _damageToPlayer = Mathf.RoundToInt(_damageToPlayer * _damageMultiplier);
+        _runeValue = Mathf.Max(1, Mathf.RoundToInt(_runeValue * runeMult));
     }
 
     private void Update()
@@ -106,15 +135,30 @@ public class EnemyController : MonoBehaviour, IDamageable
             _spriteRenderer.color = Color.red;
         }
 
+        DropRune();
+
         yield return new WaitForSeconds(0.3f);
 
         Destroy(gameObject);
     }
 
+    private void DropRune()
+    {
+        DungeonGenerator dg = FindFirstObjectByType<DungeonGenerator>();
+        if (dg == null || dg.RunePickupPrefab == null) return;
+
+        GameObject rune = Instantiate(dg.RunePickupPrefab, transform.position, Quaternion.identity);
+        RunePickup pickup = rune.GetComponent<RunePickup>();
+        if (pickup != null)
+        {
+            pickup.Initialize(RuneValue);
+        }
+    }
+
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (_isDead) return;
-        if (other.gameObject.layer != LayerMask.NameToLayer("player")) return;
+        if (other.gameObject.layer != LayerMask.NameToLayer("Player")) return;
         if (_attackCooldownTimer > 0) return;
 
         PlayerController pc = other.GetComponent<PlayerController>();

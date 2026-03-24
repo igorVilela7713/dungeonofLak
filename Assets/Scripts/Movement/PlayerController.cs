@@ -27,6 +27,12 @@ public class PlayerController : MonoBehaviour
 
     public Vector2 FacingDirection => _facingDirection;
     public bool IsInvincible => _isInvincible;
+    public float MoveSpeed => _moveSpeed;
+
+    public void SetMoveSpeed(float speed)
+    {
+        _moveSpeed = speed;
+    }
 
     private void Awake()
     {

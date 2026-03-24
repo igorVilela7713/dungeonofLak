@@ -10,7 +10,7 @@ public class SceneTransition : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (_isTransitioning) return;
-        if (other.gameObject.layer != LayerMask.NameToLayer("player")) return;
+        if (other.gameObject.layer != LayerMask.NameToLayer("Player")) return;
 
         _isTransitioning = true;
         SceneManager.LoadScene(_targetScene);
