@@ -34,13 +34,13 @@ public class SaveInteractable : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.gameObject.layer != LayerMask.NameToLayer("player")) return;
+        if (other.gameObject.layer != LayerMask.NameToLayer("Player")) return;
         _playerInRange = true;
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
-        if (other.gameObject.layer != LayerMask.NameToLayer("player")) return;
+        if (other.gameObject.layer != LayerMask.NameToLayer("Player")) return;
         _playerInRange = false;
 
         if (_isShowingDialogue)
