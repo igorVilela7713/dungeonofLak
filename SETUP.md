@@ -43,6 +43,7 @@ Criar GameObject "Player"
 ```
 
 **No Inspector:**
+
 - Rigidbody2D → Constraints → Freeze Rotation Z ✓
 - Layer: Player
 - PlayerController:
@@ -55,6 +56,7 @@ Criar GameObject "Player"
   - _invincibilityDuration: 0.5 (padrão)
 
 **GroundCheck:**
+
 - Criar Empty GameObject como filho do Player
 - Renomear para "GroundCheck"
 - Posicionar na base do player (nos pés)
@@ -96,7 +98,7 @@ No **Player** (que já tem `PlayerController`, `PlayerHealth`, etc.):
 4. A hitbox existe por **0.1 segundo** (configurável via `_attackDuration`)
 5. Se colidir com algo que tem `IDamageable` (como o Enemy), chama `TakeDamage()`
 
-### Fluxo de código:
+### Fluxo de código
 
 ```
 PlayerController detecta input de ataque
@@ -142,6 +144,7 @@ Criar GameObject "Enemy"
 ```
 
 **No Inspector:**
+
 - Layer: Enemy
 - CircleCollider2D (trigger):
   - **isTrigger = true** (obrigatório para detectar contato com player)
@@ -165,12 +168,14 @@ Criar GameObject "Enemy"
   - _knockbackForce: 5
 
 **GroundCheck (Enemy):**
+
 - Criar Empty GameObject como filho do Enemy
 - Renomear para "GroundCheck"
 - Posicionar na base do enemy (nos pés)
 - Arrastar no campo _groundCheck do EnemyController
 
 **Atenção:** Enemy precisa de Rigidbody2D para:
+
 1. `OnTriggerEnter2D` ser chamado (Unity requer Rigidbody2D em pelo menos um dos objetos)
 2. Movimento via `_rigidbody.linearVelocity` funcionar
 3. Knockback poder ser aplicado no futuro
@@ -208,6 +213,7 @@ Criar filhos do Room:
 ```
 
 **No Inspector do RoomController:**
+
 - _spawnPoints: clicar no "+" e arrastar cada SpawnPoint (1, 2, 3...)
 - _enemyPrefab: arrastar o prefab Enemy
 - _doors: arrastar Door1, Door2
@@ -218,6 +224,7 @@ Criar filhos do Room:
 Empty GameObject filho do Room posicionado no centro da sala. As portas fecham quando o player chega a 1 unidade desse ponto.
 
 **Hierarquia do Room:**
+
 ```
 Room (RoomController.cs, BoxCollider2D isTrigger=true)
 ├── RoomCenter (empty, posição central da sala)
@@ -228,6 +235,7 @@ Room (RoomController.cs, BoxCollider2D isTrigger=true)
 ```
 
 **Comportamento:**
+
 1. Player entra no trigger do Room → inimigos spawnam
 2. Player chega ao centro da sala → portas fecham
 3. Player mata todos os inimigos → portas abrem
@@ -293,7 +301,7 @@ Scene "Main"
 | Inimigo não segue | Verificar _player configurado no Initialize |
 | Inimigo flutua | Verificar Gravity Scale = 3 no Rigidbody2D, _groundLayer marcado com Ground |
 | Inimigo cai pelo chão | Verificar se existe CircleCollider2D com isTrigger=false para física |
-| Inimigo não pula | Verificar GroundCheck posição, _groundLayer marcado com Ground, _jumpForce configurado |
+| Inimigo não pula | Verificar GroundCheck posição, _groundLayer marcado com Ground,_jumpForce configurado |
 | Hitbox não detecta | Verificar isTrigger=true, Layer correto |
 | Porta não bloqueia | Verificar _collider atribuído, isTrigger=false |
 | Cena não reinicia | Verificar GameManager, PlayerHealth.OnDeath |
@@ -330,6 +338,7 @@ O Hub é a "base" do jogador. Dali o player pode falar com NPCs, salvar o progre
 No Unity, abra a cena `Hub.unity`.
 
 **Opção A — Tilemap (recomendado):**
+
 1. Clique direito na Hierarchy → **2D Object → Tilemap → Rectangular**
 2. Abra a janela **Window → 2D → Tile Palette**
 3. Arraste os tiles do SunnyLand para criar o chão
@@ -338,11 +347,13 @@ No Unity, abra a cena `Hub.unity`.
 6. Adicione um **TilemapCollider2D** no Tilemap das paredes
 
 **Opção B — Sprites simples:**
+
 1. Crie um Sprite com **SpriteRenderer** como chão (Layer = Ground)
 2. Adicione **BoxCollider2D** nas bordas como paredes
 3. Ajuste o tamanho no Inspector
 
 **Paredes invisíveis (alternativa):**
+
 1. Crie Empty GameObjects nas bordas
 2. Adicione **BoxCollider2D** em cada um (isTrigger = false)
 3. Estique os colliders para cobrir cada lado da área jogável
@@ -365,6 +376,7 @@ No Unity, abra a cena `Hub.unity`.
 Esta é a interface que mostra o texto dos NPCs.
 
 **Passo 1 — Canvas:**
+
 1. Clique direito na Hierarchy → **UI → Canvas**
 2. No Inspector do Canvas:
    - Canvas Scaler → UI Scale Mode: **Scale With Screen Size**
@@ -373,6 +385,7 @@ Esta é a interface que mostra o texto dos NPCs.
    - Render Mode: **Screen Space - Overlay** (padrão)
 
 **Passo 2 — DialoguePanel:**
+
 1. Clique direito no Canvas → **UI → Panel**
 2. Renomear para **"DialoguePanel"**
 3. No Inspector:
@@ -383,6 +396,7 @@ Esta é a interface que mostra o texto dos NPCs.
 4. **Desativar o DialoguePanel** (desmarcar a caixinha ao lado do nome no Inspector, ou clicar no checkmark no topo do objeto)
 
 **Passo 3 — DialogueText:**
+
 1. Clique direito no DialoguePanel → **UI → Text - TextMeshPro**
 2. Renomear para **"DialogueText"**
 3. No Inspector do TextMeshPro:
@@ -393,6 +407,7 @@ Esta é a interface que mostra o texto dos NPCs.
    - Margem: ajustar os offsets para dar padding (ex: Left: 20, Top: 20, Right: 20, Bottom: 20)
 
 **Passo 4 — DialogueUI script:**
+
 1. Clique direito na Hierarchy → **Create Empty**
 2. Renomear para **"DialogueUI"**
 3. No Inspector: **Add Component → DialogueUI**
@@ -641,11 +656,13 @@ Scene "Hub"
 #### 13.3.5 Door.prefab (já existe — verificar)
 
 O prefab `Assets/Prefabs/Door.prefab` já existe. Verificar se tem:
+
 - **Door.cs** → campo `_collider` conectado ao próprio Collider2D
 - **BoxCollider2D** → `Is Trigger = false`, Size cobrindo a área da porta
 - **SpriteRenderer** com sprite de porta
 
 Se estiver OK, pular. Se não existir ou estiver corrompido, criar:
+
 1. **Create Empty** → renomear "Door"
 2. Adicionar: SpriteRenderer, BoxCollider2D (isTrigger=false), Door.cs
 3. No Door.cs → arrastar o BoxCollider2D para o campo `_collider`
@@ -655,6 +672,7 @@ Se estiver OK, pular. Se não existir ou estiver corrompido, criar:
 Este é o prefab principal. Será a sala padrão usada pelo DungeonGenerator.
 
 **Passo 1 — Criar a raiz:**
+
 1. Na cena (não no prefab ainda): **Create Empty** → renomear "DungeonRoom"
 2. Adicionar componentes na raiz:
    - **RoomController.cs** → NÃO configurar campos agora (DungeonGenerator seta via code)
@@ -691,6 +709,7 @@ O Ground é o chão visual da sala. Ele não precisa de collider — a colisão 
 > O Scale X: 20 estica o sprite para cobrir toda a largura da sala. Scale Y: 1 mantém a altura normal.
 
 Visualização:
+
 ```
 ┌────────────────────┐  ← WallTop (Y=5)
 │                    │
@@ -732,6 +751,7 @@ Alternativa simplificada: usar 1 Empty "Walls" com 1 BoxCollider2D (Size 20, 11,
 **Passo 6 — Conectar no Inspector do RoomController (raiz):**
 
 No componente RoomController.cs da raiz DungeonRoom:
+
 - `_spawnPoints`: expandir array para 2, arrastar SpawnPoint1 e SpawnPoint2
 - `_eliteSpawnPoint`: arrastar EliteSpawnPoint
 - `_eliteEnemyPrefab`: **deixar vazio** (DungeonGenerator seta)
@@ -742,10 +762,12 @@ No componente RoomController.cs da raiz DungeonRoom:
 - `_roomType`: Combat (default)
 
 **Passo 7 — Converter em Prefab:**
+
 1. Arrastar o GameObject "DungeonRoom" da Hierarchy para `Assets/Prefabs/`
 2. Deletar o DungeonRoom da cena
 
 **Estrutura final do prefab:**
+
 ```
 DungeonRoom (RoomController.cs, BoxCollider2D isTrigger)
 ├── RoomCenter
@@ -773,6 +795,7 @@ DungeonRoom (RoomController.cs, BoxCollider2D isTrigger)
 5. Salvar e fechar o prefab
 
 **Estrutura final:**
+
 ```
 ExitRoom (RoomController.cs, BoxCollider2D isTrigger)
 ├── RoomCenter
@@ -809,17 +832,18 @@ ExitRoom (RoomController.cs, BoxCollider2D isTrigger)
 | `Ground` | (0, -6, 0) | SpriteRenderer | Chão largo |
 | `Walls` | (0, 0, 0) | Ver abaixo | |
 
-4. Configurar Walls (mesmo padrão do DungeonRoom):
+1. Configurar Walls (mesmo padrão do DungeonRoom):
    - `WallTop` (0, 6, 0) — BoxCollider2D Size (24, 0.5), Layer Ground
    - `WallBottom` (0, -6.5, 0) — BoxCollider2D Size (24, 0.5), Layer Ground
 
-5. Conectar no Inspector:
+2. Conectar no Inspector:
    - **RoomController.cs**: `_doors`: [DoorLeft, DoorRight], `_roomCenter`: RoomCenter, `_roomType`: Boss
    - **BossFloorHandler.cs**: `_bossPrefab`: Enemy.prefab (por enquanto), `_bossSpawnPoint`: BossSpawnPoint, `_roomController`: self (arrastar BossArena_5)
 
-6. Arrastar para `Assets/Prefabs/`, deletar da cena
+3. Arrastar para `Assets/Prefabs/`, deletar da cena
 
 **Estrutura final:**
+
 ```
 BossArena_5 (RoomController.cs, BossFloorHandler.cs, BoxCollider2D isTrigger)
 ├── RoomCenter
@@ -859,10 +883,11 @@ BossArena_5 (RoomController.cs, BossFloorHandler.cs, BoxCollider2D isTrigger)
 | `Walls` → `WallTop` | (0, 5, 0) | BoxCollider2D (16, 0.5), Layer Ground | |
 | `Walls` → `WallBottom` | (0, -5.5, 0) | BoxCollider2D (16, 0.5), Layer Ground | |
 
-4. Conectar no Inspector do RewardArea.cs: `_exitTrigger`: arrastar ExitTrigger
-5. Arrastar para `Assets/Prefabs/`, deletar da cena
+1. Conectar no Inspector do RewardArea.cs: `_exitTrigger`: arrastar ExitTrigger
+2. Arrastar para `Assets/Prefabs/`, deletar da cena
 
 **Estrutura final:**
+
 ```
 RewardRoom (RewardArea.cs, BoxCollider2D isTrigger)
 ├── PlayerSpawnPoint
@@ -909,26 +934,31 @@ Depois de criar todos, verifique em `Assets/Prefabs/`:
 3. Criar GameObjects na Hierarchy:
 
 **FloorManager:**
+
 - Create Empty → renomear "FloorManager"
 - Adicionar `FloorManager.cs`
 - Inspector: `_dungeonGenerator` = arrastar DungeonGenerator, `_floorUI` = arrastar FloorUI, `_player` = arrastar Player, `_floorConfig` = arrastar DefaultFloorConfig.asset
 
 **DungeonGenerator:**
+
 - Create Empty → renomear "DungeonGenerator"
 - Adicionar `DungeonGenerator.cs`
-- Inspector: `_roomPrefab` = DungeonRoom.prefab, `_exitRoomPrefab` = ExitRoom.prefab, `_bossArenaPrefabs` = [BossArena_5, BossArena_10, BossArena_15], `_rewardRoomPrefab` = RewardRoom.prefab, `_eliteEnemyPrefab` = Enemy.prefab (com _isElite=true), `_trapPrefabs` = [TrapSpike.prefab], `_runePickupPrefab` = RunePickup.prefab, `_healingShrinePrefab` = HealingShrine.prefab, `_riskRewardAltarPrefab` = RiskRewardAltar.prefab, `_player` = Player, `_seed` = 0
+- Inspector: `_roomPrefab` = DungeonRoom.prefab, `_exitRoomPrefab` = ExitRoom.prefab, `_bossArenaPrefabs` = [BossArena_5, BossArena_10, BossArena_15], `_rewardRoomPrefab` = RewardRoom.prefab, `_eliteEnemyPrefab` = Enemy.prefab (com_isElite=true), `_trapPrefabs` = [TrapSpike.prefab], `_runePickupPrefab` = RunePickup.prefab, `_healingShrinePrefab` = HealingShrine.prefab, `_riskRewardAltarPrefab` = RiskRewardAltar.prefab, `_player` = Player, `_seed` = 0
 
 **RunCurrency:**
+
 - Create Empty → renomear "RunCurrency"
 - Adicionar `RunCurrency.cs`
 - Inspector: `_floorUI` = arrastar FloorUI
 
 **RunUpgradeManager:**
+
 - Create Empty → renomear "RunUpgradeManager"
 - Adicionar `RunUpgradeManager.cs`
 - Inspector: `_playerHealth` = PlayerHealth do Player, `_playerController` = PlayerController do Player
 
 **FloorUI (Canvas):**
+
 - UI → Canvas (Screen Space - Overlay, Canvas Scaler: Scale With Screen Size 1920x1080)
 - Dentro do Canvas: UI → Text - TextMeshPro → "FloorText" (top center, size 32, branco)
 - Dentro do Canvas: UI → Text - TextMeshPro → "RuneText" (top right, size 28, amarelo, texto "Runas: 0")
@@ -936,7 +966,7 @@ Depois de criar todos, verifique em `Assets/Prefabs/`:
 - Adicionar `FloorUI.cs`
 - Inspector: `_floorText` = FloorText TMP, `_runeText` = RuneText TMP
 
-4. **Verificar GameManager:**
+1. **Verificar GameManager:**
    - Selecionar GameManager na cena
    - `_sceneName` deve ser "Hub"
    - `_playerHealth` deve estar conectado ao PlayerHealth do Player
@@ -1000,15 +1030,858 @@ Scene "Main"
 | Player não spawna | Verificar _player no FloorManager/DungeonGenerator |
 | Salas sobrepostas | Verificar _roomWidth/_roomHeight corresponde ao tamanho real do prefab |
 | Portas não funcionam | Verificar Door prefabs nos filhos da sala, _doors no RoomController |
-| Boss não spawna | Verificar _bossPrefab e _bossSpawnPoint no BossFloorHandler |
+| Boss não spawna | Verificar _bossPrefab e_bossSpawnPoint no BossFloorHandler |
 | Andar não avança | Verificar FloorTransition no ExitTrigger, isTrigger=true no BoxCollider2D |
-| Inimigos fracos | Verificar _hpScalingPerFloor e _dmgScalingPerFloor no FloorConfigSO |
+| Inimigos fracos | Verificar _hpScalingPerFloor e_dmgScalingPerFloor no FloorConfigSO |
 | NullReference na geração | Verificar todos os prefabs atribuídos no Inspector do DungeonGenerator |
 | FloorUI não aparece | Verificar FloorUI.cs conectado, TextMeshProUGUI arrastados |
 | Trap não causa dano | Verificar isTrigger=true, layer "player" ou "Enemy" |
 | Runas não dropam | Verificar _runePickupPrefab no DungeonGenerator |
 | Runas não resetam | Verificar GameManager chama RunCurrency.ResetRunes() |
-| Upgrade não aplica | Verificar RunUpgradeManager refs: _playerHealth, _playerController |
+| Upgrade não aplica | Verificar RunUpgradeManager refs: _playerHealth,_playerController |
 | HealingShrine não cura | Verificar isTrigger=true, PlayerHealth tem HealPercent() |
 | RiskRewardAltar não responde | Verificar InputAction E habilitado, _playerInRange |
 | Erro "Instance is null" | Verificar singleton GameObjects existem na cena antes de Play |
+
+---
+
+## 14. Fase 8 — Sistema de Armas
+
+Esta fase substitui os campos hardcoded do `WeaponController` por um sistema baseado em ScriptableObject. Cada arma tem stats próprios (dano, cooldown, alcance, knockback, padrão de ataque) e um visual placeholder distinto. O player pode trocar de arma pressionando Q ou coletando pickups no chão.
+
+---
+
+### 14.1 Visão Geral do Sistema
+
+**Antes (Fase 4):**
+
+- `WeaponController` tinha `_damage`, `_attackCooldown`, `_attackDuration`, `_knockbackForce` como campos fixos no Inspector
+- Só existia a Sword — não havia como trocar de arma
+- Spawn usava `_player.right * 0.8f` — direção fixa, não usava `FacingDirection`
+- Dano era direto, sem multiplicador de run
+
+**Depois (Fase 8):**
+
+- Stats vêm de `WeaponDataSO` — um ScriptableObject por arma
+- Player carrega uma lista de armas disponíveis (`_availableWeapons`)
+- Q cicla entre armas; pickups adicionam novas armas à lista
+- Spawn usa `PlayerController.FacingDirection` — ataque na direção certa (esquerda/direita)
+- Dano final = `weapon.damage × RunUpgradeManager.DamageMultiplier`
+- Cada arma tem visual placeholder distinto (child com cor única)
+
+**Fluxo de código — Ataque:**
+
+```
+Player pressiona Mouse/Enter/Gamepad
+        ↓
+WeaponController.Attack()
+  → verifica _isAttacking, _cooldownTimer, _equippedWeapon
+  → _isAttacking = true
+  → SpawnHitbox()
+      → pega FacingDirection do PlayerController
+      → calcula offset via GetAttackOffset(facingDir)
+      → Instantiate(_hitboxPrefab) na posição correta
+      → ajusta localScale = attackRange / BaseHitboxSize
+      → SwordHitbox.Initialize(this) — limpa HashSet de hits
+  → StartCoroutine(AttackRoutine())
+      → espera attackDuration
+      → destroi hitbox
+      → _isAttacking = false
+      → _cooldownTimer = attackCooldown
+        ↓
+SwordHitbox.OnTriggerEnter2D(colisor)
+  → verifica HashSet (já acertou? ignora)
+  → adiciona ao HashSet
+  → chama WeaponController.OnHitboxTrigger(colisor)
+      → pega IDamageable do alvo
+      → calcula finalDamage = weapon.damage
+      → se RunUpgradeManager existe: finalDamage *= DamageMultiplier
+      → damageable.TakeDamage(finalDamage)
+      → aplica knockback no Rigidbody2D
+```
+
+**Fluxo de código — Troca de arma (pickup):**
+
+```
+Player encosta em WeaponPickup
+        ↓
+WeaponPickup.OnTriggerEnter2D(colisor)
+  → verifica layer = "Player"
+  → pega WeaponController via GetComponentInParent
+  → wc.EquipWeapon(_weaponData)
+  → Destroy(gameObject) — pickup consumido
+        ↓
+WeaponController.EquipWeapon(weapon)
+  → adiciona na _availableWeapons se não existe
+  → se _isAttacking: return (não equipa agora, mas arma já está na lista)
+  → _equippedWeapon = weapon
+  → _currentWeaponIndex = index na lista
+  → _visualController.EquipVisual(weapon.weaponType)
+```
+
+**Fluxo de código — Troca de arma (Q):**
+
+```
+Player pressiona Q
+        ↓
+WeaponController.CycleWeapon()
+  → se _availableWeapons.Count <= 1: return (não faz nada)
+  → se _isAttacking: return
+  → _currentWeaponIndex = (index + 1) % count
+  → _equippedWeapon = _availableWeapons[index]
+  → _visualController.EquipVisual(weapon.weaponType)
+```
+
+---
+
+### 14.2 Arquivos Criados
+
+| Arquivo | Função |
+|---------|--------|
+| `Assets/Scripts/Combat/WeaponType.cs` | Enum: `Sword`, `Spear`, `Axe`, `Dagger` |
+| `Assets/Scripts/Combat/AttackPattern.cs` | Enum: `HorizontalSwing`, `ForwardThrust`, `OverheadSmash`, `QuickStab` |
+| `Assets/Scripts/Combat/WeaponDataSO.cs` | ScriptableObject com todos os dados de uma arma |
+| `Assets/Scripts/Combat/WeaponVisualController.cs` | Ativa/desativa child visual conforme arma equipada |
+| `Assets/Scripts/Combat/WeaponPickup.cs` | Trigger no chão que equipa arma ao player |
+
+---
+
+### 14.3 Arquivos Modificados
+
+| Arquivo | O que mudou |
+|---------|-------------|
+| `Assets/Scripts/Combat/WeaponController.cs` | Refatorado: lê stats de `WeaponDataSO`, usa `FacingDirection` do `PlayerController`, adiciona `EquipWeapon()`, lista `_availableWeapons` com swap por Q (tecla), `GetAttackOffset()` por `AttackPattern`, `BaseHitboxSize` constante, integração com `RunUpgradeManager.GetDamageMultiplier()`. `EquipWeapon()` sempre adiciona à lista; durante ataque não equipa mas arma entra no ciclo de Q. `Awake()` sincroniza visual com arma default. |
+| `Assets/Scripts/Combat/SwordHitbox.cs` | Adicionado `HashSet<Collider2D> _hitTargets` para prevenir multi-hit. `Initialize()` limpa o set a cada ataque. |
+
+---
+
+### 14.4 ScriptableObjects — Criar as 4 Armas
+
+#### 14.4.1 Criar a pasta
+
+1. No **Project window**, navegar até `Assets/Data/`
+2. Clique direito → **Create → Folder**
+3. Renomear para **"Weapons"**
+4. Caminho final: `Assets/Data/Weapons/`
+
+#### 14.4.2 Criar WeaponSword.asset
+
+1. Clique direito na pasta `Assets/Data/Weapons/`
+2. **Create → Combat → Weapon Data**
+3. Um asset aparece chamado "New Weapon Data"
+4. Renomear para **"WeaponSword"**
+5. Selecionar o asset — no Inspector, preencher:
+
+**Seção Identity:**
+
+| Campo | Valor |
+|-------|-------|
+| weaponType | Sword (selecionar no dropdown) |
+| weaponName | `Sword` |
+
+**Seção Stats:**
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| damage | 10 | Dano base por acerto |
+| attackCooldown | 0.3 | Segundos entre ataques |
+| attackDuration | 0.1 | Segundos que a hitbox fica ativa |
+| attackRange | 0.8 | Alcance em unidades. BaseHitboxSize = 0.8, então scale = 1.0 |
+| knockbackForce | 2.0 | Força de empurrão no alvo |
+
+**Seção Attack Pattern:**
+
+| Campo | Valor |
+|-------|-------|
+| attackPattern | HorizontalSwing |
+
+**Seção Visual:**
+
+| Campo | Valor | Como escolher |
+|-------|-------|---------------|
+| placeholderColor | R: 0.85, G: 0.85, B: 0.9, A: 1 | Cinza claro — usar o color picker ou digitar os valores |
+
+#### 14.4.3 Criar WeaponSpear.asset
+
+1. Clique direito na pasta `Assets/Data/Weapons/`
+2. **Create → Combat → Weapon Data**
+3. Renomear para **"WeaponSpear"**
+4. Preencher no Inspector:
+
+**Seção Identity:**
+
+| Campo | Valor |
+|-------|-------|
+| weaponType | Spear |
+| weaponName | `Spear` |
+
+**Seção Stats:**
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| damage | 8 | Menor dano que sword, mas mais alcance |
+| attackCooldown | 0.4 | Mais lenta que sword |
+| attackDuration | 0.12 | Hitbox fica ativa um pouco mais |
+| attackRange | 1.3 | Maior alcance — scale = 1.3/0.8 = 1.625 |
+| knockbackForce | 1.5 | Menor knockback |
+
+**Seção Attack Pattern:**
+
+| Campo | Valor |
+|-------|-------|
+| attackPattern | ForwardThrust |
+
+**Seção Visual:**
+
+| Campo | Valor |
+|-------|-------|
+| placeholderColor | R: 0.3, G: 0.5, B: 0.9, A: 1 | Azul |
+
+#### 14.4.4 Criar WeaponAxe.asset
+
+1. Clique direito na pasta `Assets/Data/Weapons/`
+2. **Create → Combat → Weapon Data**
+3. Renomear para **"WeaponAxe"**
+4. Preencher no Inspector:
+
+**Seção Identity:**
+
+| Campo | Valor |
+|-------|-------|
+| weaponType | Axe |
+| weaponName | `Axe` |
+
+**Seção Stats:**
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| damage | 18 | Maior dano — arma lenta e pesada |
+| attackCooldown | 0.6 | Mais lenta |
+| attackDuration | 0.15 | Hitbox fica ativa mais tempo |
+| attackRange | 0.7 | Menor alcance — scale = 0.7/0.8 = 0.875 |
+| knockbackForce | 4.0 | Knockback alto — empurra muito |
+
+**Seção Attack Pattern:**
+
+| Campo | Valor |
+|-------|-------|
+| attackPattern | OverheadSmash |
+
+**Seção Visual:**
+
+| Campo | Valor |
+|-------|-------|
+| placeholderColor | R: 0.9, G: 0.3, B: 0.3, A: 1 | Vermelho |
+
+#### 14.4.5 Criar WeaponDagger.asset
+
+1. Clique direito na pasta `Assets/Data/Weapons/`
+2. **Create → Combat → Weapon Data**
+3. Renomear para **"WeaponDagger"**
+4. Preencher no Inspector:
+
+**Seção Identity:**
+
+| Campo | Valor |
+|-------|-------|
+| weaponType | Dagger |
+| weaponName | `Dagger` |
+
+**Seção Stats:**
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| damage | 5 | Dano baixo — compensado pela velocidade |
+| attackCooldown | 0.15 | Muito rápida — quase 2x mais rápido que sword |
+| attackDuration | 0.06 | Hitbox aparece e some rápido |
+| attackRange | 0.5 | Curto alcance — scale = 0.5/0.8 = 0.625 |
+| knockbackForce | 1.0 | Knockback mínimo |
+
+**Seção Attack Pattern:**
+
+| Campo | Valor |
+|-------|-------|
+| attackPattern | QuickStab |
+
+**Seção Visual:**
+
+| Campo | Valor |
+|-------|-------|
+| placeholderColor | R: 0.3, G: 0.8, B: 0.3, A: 1 | Verde |
+
+#### 14.4.6 Verificação
+
+Depois de criar os 4 assets, verificar em `Assets/Data/Weapons/`:
+
+```
+Assets/Data/Weapons/
+├── WeaponSword.asset    ← weaponType=Sword, damage=10, cor=cinza
+├── WeaponSpear.asset    ← weaponType=Spear, damage=8, cor=azul
+├── WeaponAxe.asset      ← weaponType=Axe, damage=18, cor=vermelho
+└── WeaponDagger.asset   ← weaponType=Dagger, damage=5, cor=verde
+```
+
+> Cada arma base tem um único `WeaponDataSO`. Não criar dois assets para o mesmo `WeaponType`. A lista `_availableWeapons` compara por referência do SO.
+
+---
+
+### 14.5 Ajustar o Prefab SwordHitbox
+
+Este passo ajusta o tamanho base do collider da hitbox para corresponder à constante `BaseHitboxSize = 0.8f` no `WeaponController`.
+
+1. No **Project window**, navegar até `Assets/Prefabs/`
+2. **Duplo clique** no prefab `SwordHitbox` para abrir no Prefab Editor
+3. Na Hierarchy do prefab, selecionar o objeto **SwordHitbox**
+4. No Inspector, procurar o componente **BoxCollider2D**
+5. Alterar o campo **Size**:
+   - **X: 0.8** (era 0.5)
+   - **Y: 0.8** (era 0.5)
+6. Verificar que **Is Trigger** continua marcado como `true`
+7. **Salvar** o prefab (Ctrl+S ou botão Save no topo do Prefab Editor)
+8. Fechar o Prefab Editor (seta "Back" no canto superior esquerdo da Hierarchy)
+
+**Por que 0.8?** O `WeaponController` usa a fórmula `attackRange / BaseHitboxSize` para calcular o `localScale` da hitbox. Com `BaseHitboxSize = 0.8`:
+
+- Sword (range 0.8): scale = 1.0 → hitbox com 0.8×0.8 unidades
+- Spear (range 1.3): scale = 1.625 → hitbox com 1.3×1.3 unidades
+- Axe (range 0.7): scale = 0.875 → hitbox com 0.7×0.7 unidades
+- Dagger (range 0.5): scale = 0.625 → hitbox com 0.5×0.5 unidades
+
+---
+
+### 14.6 Atualizar o Prefab Player — WeaponController _ Conitnuar daqui
+
+Abrir o prefab do Player para editar. Todos os passos abaixo são feitos **dentro do Prefab Editor**.
+
+#### 14.6.1 Abrir o Prefab
+
+1. No **Project window**, navegar até `Assets/Prefabs/`
+2. **Duplo clique** no `Player.prefab` — abre o Prefab Editor
+3. Na Hierarchy, você verá o Player e seus filhos (GroundCheck, etc.)
+
+#### 14.6.2 Reconfigurar o WeaponController
+
+O componente `WeaponController` foi refatorado. Os campos antigos (`_damage`, `_attackCooldown`, `_attackDuration`, `_knockbackForce`) foram **removidos** do script. Os novos campos aparecerão no Inspector automaticamente após o Unity recompilar.
+
+1. Na Hierarchy do prefab, selecionar o **Player** (raiz)
+2. No Inspector, procurar o componente **WeaponController**
+3. Você verá a seção **"Setup"** com 4 campos novos:
+
+**Preencher cada campo:**
+
+| Campo | O que fazer | Onde encontrar |
+|-------|-------------|----------------|
+| `_defaultWeapon` | Arrastar o asset **WeaponSword** | `Assets/Data/Weapons/WeaponSword.asset` |
+| `_hitboxPrefab` | Arrastar o prefab **SwordHitbox** | `Assets/Prefabs/SwordHitbox.prefab` |
+| `_player` | Arrastar o **Player** (o próprio objeto raiz do prefab) | No próprio prefab — arrastar da Hierarchy do Prefab Editor |
+| `_visualController` | Arrastar o componente **WeaponVisualController** | Será adicionado no próximo passo — por enquanto pode deixar vazio e voltar depois |
+
+> **Atenção:** O campo `_player` deve ser o Transform do próprio Player. No Prefab Editor, arraste o objeto raiz "Player" da Hierarchy para este campo. Isso garante que a hitbox seja instanciada como filho do player e que a posição de spawn funcione.
+
+> **Dica:** Se o campo `_visualController` ainda não existe o componente, deixe-o vazio por agora. Você vai voltar a ele no Passo 14.7 depois de criar o WeaponVisualController.
+
+---
+
+### 14.7 Atualizar o Prefab Player — Visuais de Arma
+
+Ainda dentro do Prefab Editor do Player, criar os 4 visuais placeholder e o componente WeaponVisualController.
+
+#### 14.7.1 Criar Visual_Sword
+
+1. Na Hierarchy do Prefab Editor, clicar direito no **Player** (raiz) → **Create Empty**
+2. Renomear para **"Visual_Sword"**
+3. No Inspector, verificar a posição local: **X: 0.3, Y: 0, Z: 0** (offset na frente/mão do personagem — ajustar conforme o sprite)
+4. Adicionar componente **SpriteRenderer**
+5. No SpriteRenderer, configurar:
+
+| Campo | Valor |
+|-------|-------|
+| Sprite | Qualquer sprite como placeholder (pode usar o mesmo sprite de idle do player, ou um quadrado simples) |
+| Color | R: 0.85, G: 0.85, B: 0.9, A: 1 (cinza claro) |
+| Sorting Layer | Mesmo layer do player (ex: "Default" ou o layer que o player usa) |
+| Order in Layer | Ordem do player + 1 (ex: se player = 0, usar 1). Isso garante que o visual apareça **na frente** do sprite do player, não atrás |
+
+1. O GameObject Visual_Sword deve estar **ATIVO** (checkbox marcado no topo do Inspector) — é a arma default
+
+#### 14.7.2 Criar Visual_Spear
+
+1. Na Hierarchy do Prefab Editor, clicar direito no **Player** → **Create Empty**
+2. Renomear para **"Visual_Spear"**
+3. Posição local: **mesma posição do Visual_Sword** (ex: X: 0.3, Y: 0, Z: 0) — todos os visuais ficam no mesmo ponto
+4. Adicionar componente **SpriteRenderer**
+5. Configurar:
+
+| Campo | Valor |
+|-------|-------|
+| Sprite | Mesmo sprite placeholder usado no Visual_Sword |
+| Color | R: 0.3, G: 0.5, B: 0.9, A: 1 (azul) |
+| Sorting Layer | Mesmo do Visual_Sword |
+| Order in Layer | Mesmo do Visual_Sword (ex: 1) |
+
+1. **DESATIVAR** este GameObject — desmarcar o checkbox ativo no topo do Inspector (☐). Será ativado pelo `WeaponVisualController` quando o player pegar a spear
+
+#### 14.7.3 Criar Visual_Axe
+
+1. Clicar direito no **Player** → **Create Empty**
+2. Renomear para **"Visual_Axe"**
+3. Posição local: **mesma posição** (X: 0.3, Y: 0, Z: 0)
+4. Adicionar **SpriteRenderer**:
+
+| Campo | Valor |
+|-------|-------|
+| Sprite | Mesmo sprite placeholder |
+| Color | R: 0.9, G: 0.3, B: 0.3, A: 1 (vermelho) |
+| Sorting Layer | Mesmo |
+| Order in Layer | Mesmo (ex: 1) |
+
+1. **DESATIVAR** — desmarcar checkbox ativo
+
+#### 14.7.4 Criar Visual_Dagger
+
+1. Clicar direito no **Player** → **Create Empty**
+2. Renomear para **"Visual_Dagger"**
+3. Posição local: **mesma posição** (X: 0.3, Y: 0, Z: 0)
+4. Adicionar **SpriteRenderer**:
+
+| Campo | Valor |
+|-------|-------|
+| Sprite | Mesmo sprite placeholder |
+| Color | R: 0.3, G: 0.8, B: 0.3, A: 1 (verde) |
+| Sorting Layer | Mesmo |
+| Order in Layer | Mesmo (ex: 1) |
+
+1. **DESATIVAR** — desmarcar checkbox ativo
+
+#### 14.7.5 Adicionar WeaponVisualController
+
+1. Selecionar o **Player** (raiz) na Hierarchy do Prefab Editor
+2. No Inspector, clicar **Add Component**
+3. Digitar "WeaponVisualController" e selecionar o script
+4. O componente aparece com 4 campos vazios na seção **"Visual References"**
+
+**Arrastar cada referência:**
+
+| Campo no Inspector | Arrastar da Hierarchy |
+|--------------------|-----------------------|
+| `_visualSword` | Visual_Sword |
+| `_visualSpear` | Visual_Spear |
+| `_visualAxe` | Visual_Axe |
+| `_visualDagger` | Visual_Dagger |
+
+#### 14.7.6 Conectar _visualController no WeaponController
+
+Agora volte ao componente **WeaponController** no Player:
+
+1. Selecionar o **Player** (raiz)
+2. Expandir o componente **WeaponController**
+3. No campo `_visualController`, arrastar o componente **WeaponVisualController** do mesmo Player
+
+> **Como arrastar componente:** No Inspector, clique no pequeno círculo ao lado do campo `_visualController` — uma janela aparece listando os componentes do Player. Selecione "WeaponVisualController". Alternativamente, arraste o Player da Hierarchy para o campo e depois expandir o dropdown para selecionar o componente específico.
+
+#### 14.7.7 Verificar estado dos visuais
+
+Antes de salvar, verifique na Hierarchy do Prefab Editor:
+
+| GameObject | Estado (checkbox no topo) | Cor no SpriteRenderer |
+|------------|--------------------------|----------------------|
+| Visual_Sword | **ATIVO** ✓ | R: 0.85, G: 0.85, B: 0.9 |
+| Visual_Spear | **DESATIVADO** ☐ | R: 0.3, G: 0.5, B: 0.9 |
+| Visual_Axe | **DESATIVADO** ☐ | R: 0.9, G: 0.3, B: 0.3 |
+| Visual_Dagger | **DESATIVADO** ☐ | R: 0.3, G: 0.8, B: 0.3 |
+
+#### 14.7.8 Salvar e sair
+
+1. **Ctrl+S** para salvar o prefab
+2. Clicar a seta **"Back"** no canto superior esquerdo da Hierarchy (ou "←" ao lado do nome do prefab) para sair do Prefab Editor
+
+#### 14.7.9 Hierarquia final do Player
+
+```
+Player
+├── Rigidbody2D
+├── BoxCollider2D
+├── PlayerController.cs
+├── PlayerHealth.cs
+├── WeaponController.cs
+│   ├── _defaultWeapon = WeaponSword.asset
+│   ├── _hitboxPrefab = SwordHitbox.prefab
+│   ├── _player = Player (this.transform)
+│   └── _visualController = WeaponVisualController (componente do mesmo Player)
+├── WeaponVisualController.cs
+│   ├── _visualSword = Visual_Sword
+│   ├── _visualSpear = Visual_Spear
+│   ├── _visualAxe = Visual_Axe
+│   └── _visualDagger = Visual_Dagger
+├── Visual_Sword (Empty, SpriteRenderer, color=cinza, ATIVO ✓)
+│   └── SpriteRenderer (sprite placeholder, sorting acima do player)
+├── Visual_Spear (Empty, SpriteRenderer, color=azul, DESATIVADO ☐)
+│   └── SpriteRenderer
+├── Visual_Axe (Empty, SpriteRenderer, color=vermelho, DESATIVADO ☐)
+│   └── SpriteRenderer
+├── Visual_Dagger (Empty, SpriteRenderer, color=verde, DESATIVADO ☐)
+│   └── SpriteRenderer
+└── GroundCheck (Empty, existente)
+```
+
+---
+
+### 14.8 Criar o Prefab WeaponPickup
+
+Este é o item que aparece no chão e que o player coleta para obter uma nova arma.
+
+#### 14.8.1 Criar o GameObject
+
+1. Na **Hierarchy** de qualquer cena aberta (pode ser a cena Main ou uma vazia)
+2. Clique direito → **Create Empty**
+3. Renomear para **"WeaponPickup"**
+
+#### 14.8.2 Adicionar SpriteRenderer
+
+1. Selecionar o WeaponPickup na Hierarchy
+2. No Inspector: **Add Component → SpriteRenderer**
+3. Configurar:
+
+| Campo | Valor | Nota |
+|-------|-------|------|
+| Sprite | Gem/item do SunnyLand (qualquer sprite de item coletável) | Placeholder — será substituído por sprite final depois |
+| Color | Branco (padrão) | A cor visual vem do WeaponDataSO, não do SpriteRenderer do pickup |
+| Sorting Layer | Default (ou o layer dos itens no chão) |
+| Order in Layer | 0 (ou acima do chão) |
+
+#### 14.8.3 Adicionar CircleCollider2D
+
+1. **Add Component → CircleCollider2D**
+2. Configurar:
+
+| Campo | Valor |
+|-------|-------|
+| Is Trigger | **true** (marcar — obrigatório para detecção) |
+| Radius | 0.3 |
+
+> O `Is Trigger = true` é essencial. Sem isso, o player colide fisicamente com o pickup e não detecta a coleta via `OnTriggerEnter2D`.
+
+#### 14.8.4 Adicionar WeaponPickup.cs
+
+1. **Add Component → WeaponPickup**
+2. No campo `_weaponData`: **deixar vazio**
+
+> Cada instância do pickup na cena/configura o seu `_weaponData` individualmente. O prefab fica com o campo vazio. Quando você arrastar o prefab para a cena e quiser que ele seja uma Spear, você arrasta `WeaponSpear.asset` para o `_weaponData` daquela instância.
+
+#### 14.8.5 Converter em Prefab
+
+1. No **Project window**, navegar até `Assets/Prefabs/`
+2. **Arrastar** o GameObject "WeaponPickup" da Hierarchy para a pasta `Assets/Prefabs/`
+3. O Unity pergunta se quer criar um Prefab — confirmar
+4. O prefab `WeaponPickup.prefab` aparece na pasta
+5. **Deletar** o WeaponPickup da Hierarchy — ele só existe como prefab agora
+
+#### 14.8.6 Hierarquia do Prefab
+
+```
+WeaponPickup (prefab)
+├── SpriteRenderer (gem/item placeholder, color=white)
+├── CircleCollider2D (Is Trigger = true, Radius = 0.3)
+└── WeaponPickup.cs
+    └── _weaponData: vazio (configurar em cada instância)
+```
+
+---
+
+### 14.9 Criar a Cena de Teste (WeaponTestScene)
+
+Esta cena isolada permite testar o sistema de armas sem depender da geração de dungeon.
+
+#### 14.9.1 Criar a cena
+
+1. **File → New Scene → Basic (Built-in)**
+2. Uma cena vazia abre (Main Camera + Directional Light)
+3. **File → Save As**
+4. Navegar até `Assets/Scenes/`
+5. Salvar como **"WeaponTestScene.unity"**
+
+> Não precisa adicionar ao Build Settings — esta cena é só para desenvolvimento.
+
+#### 14.9.2 Adicionar o Player
+
+1. No **Project window**, navegar até `Assets/Prefabs/`
+2. **Arrastar** `Player.prefab` para a Hierarchy da cena
+3. Posicionar o Player: **X: 0, Y: 0, Z: 0** (centro da cena)
+4. O Player já vem com `PlayerController`, `PlayerHealth`, `WeaponController`, `WeaponVisualController` e os 4 visuais configurados
+
+#### 14.9.3 Configurar a Câmera
+
+1. Selecionar a **Main Camera** na Hierarchy
+2. Adicionar componente **CameraFollow** (se não existir)
+3. No campo `_target`: arrastar o **Player** da cena
+4. `_smoothTime`: 0.15 (padrão)
+5. Ajustar a posição Z da câmera para o que funcionar (ex: Z: -10) para ver o player
+
+#### 14.9.4 Criar o Chão
+
+1. Na Hierarchy, clicar direito → **Create Empty**
+2. Renomear para **"Chao"**
+3. Adicionar **SpriteRenderer**:
+   - Sprite: qualquer sprite de chão/grande do SunnyLand (ou usar um quadrado simples)
+   - Color: marrom/cinza (ex: R: 0.4, G: 0.3, B: 0.2)
+   - Scale: **X: 30, Y: 1, Z: 1** (largo o suficiente para andar)
+   - Posição: **X: 0, Y: -3, Z: 0** (abaixo do player)
+4. Adicionar **BoxCollider2D**:
+   - Is Trigger: **false** (colisão física, não trigger)
+   - Size: ajustar para cobrir o sprite (ex: X: 30, Y: 1)
+5. Definir a **Layer** como **Ground** (se a layer Ground existe no projeto)
+
+#### 14.9.5 Criar os Pickups de Arma
+
+Para cada arma que não é a default (Spear, Axe, Dagger), criar uma instância do prefab WeaponPickup.
+
+**Pickup_Spear:**
+
+1. No Project, selecionar `Assets/Prefabs/WeaponPickup.prefab`
+2. **Arrastar** para a Hierarchy
+3. Renomear a instância para **"Pickup_Spear"**
+4. Posicionar: **X: 3, Y: -2, Z: 0** (à direita do player, perto do chão)
+5. No Inspector da instância, expandir o componente **WeaponPickup**
+6. No campo `_weaponData`: arrastar **WeaponSpear.asset** de `Assets/Data/Weapons/`
+
+**Pickup_Axe:**
+
+1. Arrastar `WeaponPickup.prefab` para a Hierarchy novamente
+2. Renomear para **"Pickup_Axe"**
+3. Posicionar: **X: 6, Y: -2, Z: 0**
+4. No `_weaponData`: arrastar **WeaponAxe.asset**
+
+**Pickup_Dagger:**
+
+1. Arrastar `WeaponPickup.prefab` para a Hierarchy
+2. Renomear para **"Pickup_Dagger"**
+3. Posicionar: **X: 9, Y: -2, Z: 0**
+4. No `_weaponData`: arrastar **WeaponDagger.asset**
+
+> Os pickups ficam em linha reta à direita do player, cada um a 3 unidades de distância. Assim é fácil testar coletando um por vez.
+
+#### 14.9.6 (Opcional) Adicionar Dummy Enemy
+
+1. No Project, selecionar `Assets/Prefabs/Enemy.prefab`
+2. Arrastar para a Hierarchy
+3. Renomear para **"DummyEnemy"**
+4. Posicionar: **X: -3, Y: -2, Z: 0** (à esquerda do player)
+5. No componente EnemyController: `_player` pode ser deixado vazio ou arrastar o Player
+
+> Se o EnemyController precisa de `_player` setado via `Initialize()`, pode ser necessário criar um dummy setup. Alternativamente, pular este passo e testar dano apenas na cena Main.
+
+#### 14.9.7 Hierarquia final da cena
+
+```
+WeaponTestScene
+├── Main Camera
+│   └── CameraFollow.cs (_target = Player, _smoothTime = 0.15)
+├── Directional Light (padrão da cena)
+├── Player (Player.prefab)
+│   ├── PlayerController.cs
+│   ├── PlayerHealth.cs
+│   ├── WeaponController.cs (_defaultWeapon = Sword, _hitboxPrefab = SwordHitbox)
+│   ├── WeaponVisualController.cs (refs conectadas)
+│   ├── Visual_Sword (ATIVO, cinza)
+│   ├── Visual_Spear (DESATIVO, azul)
+│   ├── Visual_Axe (DESATIVO, vermelho)
+│   └── Visual_Dagger (DESATIVO, verde)
+├── Chao (SpriteRenderer + BoxCollider2D, Layer = Ground)
+├── Pickup_Spear (WeaponPickup, _weaponData = WeaponSpear.asset)
+├── Pickup_Axe (WeaponPickup, _weaponData = WeaponAxe.asset)
+├── Pickup_Dagger (WeaponPickup, _weaponData = WeaponDagger.asset)
+└── DummyEnemy (Enemy.prefab, opcional)
+```
+
+#### 14.9.8 O que NÃO adicionar nesta cena
+
+- NÃO adicionar `FloorManager` — não é necessário para teste de armas
+- NÃO adicionar `DungeonGenerator` — não gerar salas
+- NÃO adicionar `RunCurrency` — não testar economia aqui
+- `RunUpgradeManager` é **opcional** — se não estiver na cena, o dano usa o valor base do `WeaponDataSO` sem multiplicador (comportamento correto, sem erro)
+- NÃO adicionar `GameManager` — não testar morte/restart aqui
+- NÃO adicionar `Canvas`/`FloorUI` — não testar UI aqui
+
+> Esta cena é puramente para testar: atacar, trocar arma, visual, hitbox, dano, knockback.
+
+---
+
+### 14.10 Fluxo de Dano Explicado
+
+Entender como o dano é calculado ajuda a debugar se algo parece errado.
+
+#### Cálculo do dano
+
+```
+Dano Final = WeaponDataSO.damage × RunUpgradeManager.DamageMultiplier
+```
+
+- `WeaponDataSO.damage` — valor fixo por arma (Sword=10, Spear=8, Axe=18, Dagger=5)
+- `RunUpgradeManager.DamageMultiplier` — começa em 1.0, aumenta com upgrades de dano
+- Se `RunUpgradeManager.Instance` não existe na cena → multiplicador implícito = 1.0 → dano = valor do SO puro
+
+#### Exemplos
+
+| Arma | damage | DamageMultiplier | Dano Final |
+|------|--------|-----------------|------------|
+| Sword | 10 | 1.0 (sem upgrades) | 10 |
+| Sword | 10 | 1.2 (upgrade Dano+) | 12 |
+| Axe | 18 | 1.0 | 18 |
+| Axe | 18 | 1.5 (Berserker) | 27 |
+| Dagger | 5 | 1.0 | 5 |
+
+#### Hitbox Scale
+
+O tamanho da hitbox é calculado assim:
+
+```
+localScale = attackRange / BaseHitboxSize
+```
+
+`BaseHitboxSize = 0.8f` (constante no WeaponController). O BoxCollider2D do prefab SwordHitbox tem Size = 0.8.
+
+| Arma | attackRange | Scale | Tamanho real da hitbox |
+|------|-------------|-------|----------------------|
+| Sword | 0.8 | 1.0 | 0.8 × 0.8 unidades |
+| Spear | 1.3 | 1.625 | 1.3 × 1.3 unidades |
+| Axe | 0.7 | 0.875 | 0.7 × 0.7 unidades |
+| Dagger | 0.5 | 0.625 | 0.5 × 0.5 unidades |
+
+#### Attack Pattern (Offset de Ataque)
+
+Cada `AttackPattern` define onde a hitbox aparece relativa ao player:
+
+| Pattern | Offset X | Offset Y | Sensação |
+|---------|----------|----------|----------|
+| HorizontalSwing | facingDir.x × range | +0.2 | Lateral, levemente acima |
+| ForwardThrust | facingDir.x × (range + 0.2) | 0 | Reta para frente, mais longe |
+| OverheadSmash | facingDir.x × 0.3 | range × 0.5 | Curto à frente, alto |
+| QuickStab | facingDir.x × range | 0 | Reta para frente, curto |
+
+> `facingDir` é o `PlayerController.FacingDirection` — sempre horizontal (esquerda = -1, direita = +1). Suporte vertical fica para fase futura.
+
+---
+
+### 14.11 Como Testar em Play Mode
+
+#### Teste 1 — Arma Default (Sword)
+
+1. Abrir a cena **WeaponTestScene**
+2. Clicar **Play** no Unity
+3. Verificações:
+   - O player aparece no centro da cena
+   - O **Visual_Sword** (cinza) está visível ao lado/frente do player
+   - Visual_Spear, Visual_Axe, Visual_Dagger estão invisíveis
+4. Pressionar **mouse esquerdo** (ou Enter, ou botão A do gamepad)
+5. Verificações:
+   - Uma hitbox aparece brevemente na frente do player (na direção que ele olha)
+   - A hitbox desaparece após ~0.1 segundos
+   - Se houver um DummyEnemy na frente, ele toma dano (fica vermelho)
+6. Andar para a esquerda (tecla A) e atacar novamente:
+   - A hitbox aparece na **esquerda** (não na direita)
+   - Confirma que `FacingDirection` está funcionando
+
+#### Teste 2 — Troca de Arma via Pickup
+
+1. Com a Sword equipada (default), andar para a direita até o **Pickup_Axe** (X: 6)
+2. Verificações:
+   - O pickup desaparece ao contato
+   - O **Visual_Axe** (vermelho) fica visível
+   - Visual_Sword é desativado
+3. Atacar com a Axe:
+   - O ataque é mais lento (cooldown 0.6s vs 0.3s)
+   - O knockback é maior (4.0 vs 2.0)
+   - O offset é diferente — a hitbox aparece mais acima (OverheadSmash)
+4. Andar sobre **Pickup_Spear**:
+   - Visual muda para azul
+   - Atacar → hitbox maior (attackRange 1.3)
+5. Andar sobre **Pickup_Dagger**:
+   - Visual muda para verde
+   - Atacar → hitbox menor, ataque muito rápido
+
+#### Teste 3 — Swap com Q
+
+1. Iniciar o teste com apenas a Sword (default)
+2. Pressionar **Q**:
+   - Nada acontece — só tem 1 arma na lista
+3. Coletar o Pickup_Axe → agora tem 2 armas
+4. Pressionar **Q**:
+   - A arma muda! Visual troca de vermelho (axe) para cinza (sword)
+   - Atacar → usa a Sword (ataque mais rápido)
+5. Pressionar **Q** novamente:
+   - Volta para Axe
+6. Coletar Pickup_Spear → 3 armas na lista
+7. Pressionar **Q** várias vezes:
+   - Cicla: Sword → Axe → Spear → Sword → Axe → ...
+
+#### Teste 4 — Bloqueio de Troca Durante Ataque
+
+1. Equipar a Axe
+2. Atacar → durante os 0.15s de duração da hitbox, andar sobre o Pickup_Spear
+3. Verificações:
+   - O pickup é **destruído** (consumido)
+   - A Spear é **adicionada à lista** `_availableWeapons`
+   - Mas a arma equipada continua sendo a **Axe** (não trocou)
+   - O visual continua vermelho (axe)
+4. Após o ataque terminar:
+   - Pressionar **Q** → a Spear agora aparece no ciclo
+   - A arma equipada agora pode ser trocada normalmente
+
+#### Teste 5 — Hitbox Não Acerta Múltiplas Vezes
+
+1. Posicionar o player perto de um DummyEnemy
+2. Atacar → o enemy deve tomar dano **uma vez** apenas
+3. Verificar no Console que `TakeDamage` é chamado uma vez por ataque
+
+---
+
+### 14.12 Checklist de Validação
+
+Depois de configurar tudo, passe por esta lista:
+
+- [ ] Scripts compilam sem erro (ver Console do Unity)
+- [ ] 4 ScriptableObject assets existem em `Assets/Data/Weapons/`
+- [ ] Cada SO tem `weaponType`, `damage`, `attackRange`, `attackPattern`, `placeholderColor` preenchidos
+- [ ] Player prefab tem `WeaponVisualController` com 4 referências conectadas
+- [ ] Player prefab tem `WeaponController` com `_defaultWeapon` = WeaponSword.asset
+- [ ] Player prefab tem 4 visuais (Visual_Sword/Spear/Axe/Dagger)
+- [ ] Visual_Sword está ATIVO, os outros 3 estão DESATIVADOS
+- [ ] SwordHitbox prefab tem BoxCollider2D Size = 0.8
+- [ ] WeaponPickup prefab tem CircleCollider2D com Is Trigger = true
+- [ ] WeaponTestScene existe em `Assets/Scenes/`
+- [ ] Na cena de teste: Player, Chão, 3 pickups com `_weaponData` configurado
+- [ ] Atacar com sword → hitbox aparece na direção correta (esquerda/direita)
+- [ ] Coletar pickup → visual muda
+- [ ] Pressionar Q → ciclo entre armas
+- [ ] Coletar pickup durante ataque → arma entra na lista, não equipa
+- [ ] Inimigo toma dano uma vez por ataque (sem multi-hit)
+
+---
+
+### 14.13 Troubleshooting
+
+| Problema | Causa provável | Solução |
+|----------|---------------|---------|
+| Hitbox não aparece | `_defaultWeapon` não conectado | Arrastar WeaponSword.asset para o campo `_defaultWeapon` do WeaponController |
+| Hitbox não aparece | `_hitboxPrefab` não conectado | Arrastar SwordHitbox.prefab para o campo `_hitboxPrefab` |
+| Hitbox não aparece | SwordHitbox não tem `SwordHitbox.cs` | Abrir prefab, verificar componente SwordHitbox.cs existe |
+| Erro NullReference no SpawnHitbox | `_player` não conectado | Arrastar o Player (this.transform) para o campo `_player` |
+| Visual não muda | `_visualController` não conectado | Arrastar o componente WeaponVisualController para o campo `_visualController` |
+| Visual não muda | WeaponVisualController refs vazias | Verificar os 4 campos (_visualSword, etc.) estão conectados |
+| Visual não muda | Visual_* desativado incorretamente | Visual_Sword deve estar ATIVO; os outros DESATIVADOS |
+| Todos os visuais aparecem juntos | Mais de um visual está ativo | Desativar Visual_Spear, Visual_Axe, Visual_Dagger |
+| Visual some atrás do player | Order in Layer errado | Aumentar Order in Layer dos visuais (ex: +1 acima do player) |
+| Swap Q não funciona | Só tem 1 arma na lista | Coletar um pickup primeiro — Q precisa de pelo menos 2 armas |
+| Swap Q não funciona | `_availableWeapons` está vazio | Verificar `_defaultWeapon` está conectado — Awake adiciona na lista |
+| Dano errado | Valores errados no SO | Abrir o WeaponDataSO asset e verificar `damage` |
+| Dano errado | RunUpgradeManager não existe na cena | Comportamento esperado: dano usa valor puro do SO (multiplicador = 1.0) |
+| Pickup não funciona | `Is Trigger` não marcado no CircleCollider2D | Marcar Is Trigger = true |
+| Pickup não funciona | `_weaponData` vazio na instância | Arrastar o WeaponDataSO.asset correto para o campo `_weaponData` |
+| Pickup não funciona | Player não está na layer "Player" | Verificar Layer do Player no prefab |
+| Pickup não é consumido | Script WeaponPickup não está no prefab | Abrir prefab, adicionar componente WeaponPickup.cs |
+| Troca durante ataque equipa errado | — | Comportamento esperado: `EquipWeapon()` adiciona à lista mas não equipa se `_isAttacking`. Pickup não é perdido. |
+| Hitbox acerta múltiplas vezes | HashSet não está funcionando | Verificar que `SwordHitbox.cs` foi atualizado (tem `HashSet<Collider2D> _hitTargets`) |
+| Hitbox tamanho errado | BoxCollider2D Size não é 0.8 | Abrir SwordHitbox.prefab, ajustar Size para X=0.8 Y=0.8 |
+| Hitbox tamanho errado | attackRange no SO errado | Verificar valor no asset correspondente |
+| Ataque não respeita direção | FacingDirection não funciona | Verificar PlayerController tem a propriedade pública `FacingDirection` |
+| Erro "_defaultWeapon não atribuído" | Campo vazio no Inspector | Arrastar WeaponSword.asset para `_defaultWeapon` |
+| Visual_Sword não aparece | Sprite não atribuído | Adicionar qualquer sprite no SpriteRenderer do Visual_Sword |

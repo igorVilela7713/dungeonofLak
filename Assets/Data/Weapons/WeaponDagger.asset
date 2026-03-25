@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c622d6ca91554d94c9279c731c235f85, type: 3}
+  m_Name: WeaponDagger
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponDataSO
+  weaponType: 3
+  weaponName: Dagger
+  damage: 5
+  attackCooldown: 0.15
+  attackDuration: 0.06
+  attackRange: 0.5
+  knockbackForce: 1
+  attackPattern: 3
+  placeholderColor: {r: 0.061502814, g: 1, b: 0, a: 1}

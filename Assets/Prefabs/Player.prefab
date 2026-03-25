@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 21442881939827464}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.5, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -46,7 +46,7 @@ GameObject:
   - component: {fileID: 8987935100061571599}
   - component: {fileID: 2919967730631535171}
   - component: {fileID: 794024665847065975}
-  - component: {fileID: 2421123395530754818}
+  - component: {fileID: 5295242775417837076}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -63,7 +63,7 @@ Transform:
   m_GameObject: {fileID: 5158097109091384050}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -4.73, y: 0.06, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -119,12 +119,12 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 72de0c64f2c6a498096698322c976a67, type: 3}
+  m_Sprite: {fileID: 21300000, guid: f7c27947bab498a4596b5189196e3e79, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 1, y: 1}
+  m_Size: {x: 4, y: 3}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -190,17 +190,17 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0}
+  m_Offset: {x: 0, y: 0.6}
   m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1.03125, y: 1}
-    newSize: {x: 1, y: 1}
+    border: {x: 1.09375, y: 0, z: 1.28125, w: 1.40625}
+    pivot: {x: 0.5, y: 0}
+    oldSize: {x: 4, y: 3}
+    newSize: {x: 4, y: 3}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 1, y: 1}
+  m_Size: {x: 1, y: 1.3}
   m_EdgeRadius: 0
 --- !u!114 &8987935100061571599
 MonoBehaviour:
@@ -221,7 +221,6 @@ MonoBehaviour:
   _groundLayer:
     serializedVersion: 2
     m_Bits: 128
-  _knockbackForce: 5
   _invincibilityDuration: 0.5
 --- !u!114 &2919967730631535171
 MonoBehaviour:
@@ -251,12 +250,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9cde983ab9c697741b9d6db501d7cbca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WeaponController
-  _damage: 10
-  _attackCooldown: 0.3
-  _attackDuration: 0.1
+  _defaultWeapon: {fileID: 0}
   _hitboxPrefab: {fileID: 283664599576315135, guid: ac1f53d2a48cf4b45a8652d87d9a9aa8, type: 3}
   _player: {fileID: 6883846658852411250}
---- !u!95 &2421123395530754818
+  _visualController: {fileID: 0}
+--- !u!95 &5295242775417837076
 Animator:
   serializedVersion: 7
   m_ObjectHideFlags: 0
@@ -266,7 +264,7 @@ Animator:
   m_GameObject: {fileID: 5158097109091384050}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: e4cff99bdcba65045bd79a993cb7a7cd, type: 2}
+  m_Controller: {fileID: 9100000, guid: c303dda416b7b9c4bb2710bfabacdc0e, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0

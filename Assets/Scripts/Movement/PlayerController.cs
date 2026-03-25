@@ -18,6 +18,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float _invincibilityDuration = 0.5f;
 
     private Rigidbody2D _rigidbody;
+    private Animator _animator;
+    private SpriteRenderer _spriteRenderer;
     private Vector2 _facingDirection = Vector2.right;
     private float _horizontalInput;
     private bool _isGrounded;
@@ -39,6 +41,8 @@ public class PlayerController : MonoBehaviour
         _rigidbody = GetComponent<Rigidbody2D>();
         _rigidbody.gravityScale = 3f;
         _rigidbody.freezeRotation = true;
+        _animator = GetComponent<Animator>();
+        _spriteRenderer = GetComponent<SpriteRenderer>();
 
         _moveAction = new InputAction("Move", InputActionType.Value);
         _moveAction.AddCompositeBinding("1DAxis")
@@ -90,6 +94,13 @@ public class PlayerController : MonoBehaviour
         if (_horizontalInput != 0)
         {
             _facingDirection = new Vector2(_horizontalInput > 0 ? 1 : -1, 0);
+        }
+
+        _spriteRenderer.flipX = _facingDirection.x < 0;
+
+        if (_animator != null)
+        {
+            _animator.SetFloat("speed", Mathf.Abs(_horizontalInput));
         }
     }
 
