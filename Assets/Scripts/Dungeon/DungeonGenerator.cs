@@ -12,6 +12,9 @@ public class DungeonGenerator : MonoBehaviour
     [Header("Enemy Prefabs")]
     [SerializeField] private GameObject _enemyPrefab;
     [SerializeField] private GameObject _eliteEnemyPrefab;
+    [SerializeField] private GameObject _enemyFastPrefab;
+    [SerializeField] private GameObject _enemyHeavyPrefab;
+    [SerializeField] private GameObject _enemyRangedPrefab;
 
     [Header("Trap Prefabs")]
     [SerializeField] private GameObject[] _trapPrefabs;
@@ -55,6 +58,19 @@ public class DungeonGenerator : MonoBehaviour
     public void SetFloorConfig(FloorConfigSO config)
     {
         _floorConfig = config;
+    }
+
+    private GameObject[] GetEnemyPrefabsForFloor(int floor)
+    {
+        System.Collections.Generic.List<GameObject> pool = new System.Collections.Generic.List<GameObject>();
+
+        if (_enemyPrefab != null) pool.Add(_enemyPrefab);
+
+        if (floor >= 3 && _enemyFastPrefab != null) pool.Add(_enemyFastPrefab);
+        if (floor >= 5 && _enemyHeavyPrefab != null) pool.Add(_enemyHeavyPrefab);
+        if (floor >= 7 && _enemyRangedPrefab != null) pool.Add(_enemyRangedPrefab);
+
+        return pool.ToArray();
     }
 
     public void GenerateFloor(int floorNumber)
@@ -109,9 +125,9 @@ public class DungeonGenerator : MonoBehaviour
                         rc.SetEnemyPrefab(_eliteEnemyPrefab);
                         rc.SetEliteMode(true);
                     }
-                    else if (_enemyPrefab != null)
+                    else
                     {
-                        rc.SetEnemyPrefab(_enemyPrefab);
+                        rc.SetEnemyPrefabs(GetEnemyPrefabsForFloor(floorNumber));
                     }
                 }
                 else

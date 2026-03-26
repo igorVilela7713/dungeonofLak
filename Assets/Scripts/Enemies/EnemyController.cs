@@ -1,8 +1,6 @@
 using UnityEngine;
 
-[RequireComponent(typeof(Rigidbody2D))]
-[RequireComponent(typeof(Collider2D))]
-public class EnemyController : MonoBehaviour, IDamageable
+public class EnemyController : EnemyBase
 {
     [Header("Movement Settings")]
     [SerializeField] private float _moveSpeed = 2f;
@@ -13,43 +11,31 @@ public class EnemyController : MonoBehaviour, IDamageable
     [SerializeField] private float _groundCheckRadius = 0.15f;
     [SerializeField] private LayerMask _groundLayer;
 
-    [Header("Combat Settings")]
-    [SerializeField] private int _maxHealth = 30;
-    [SerializeField] private int _damageToPlayer = 10;
-    [SerializeField] private float _attackCooldown = 1f;
-    [SerializeField] private float _knockbackForce = 5f;
+    [Header("Enemy Type")]
+    [SerializeField] private EnemyType _enemyType = EnemyType.Melee;
 
-    [Header("Elite")]
-    [SerializeField] private bool _isElite = false;
+    [Header("Ranged Settings")]
+    [SerializeField] private float _preferredDistance = 5f;
+    [SerializeField] private float _shootCooldown = 1.5f;
+    [SerializeField] private GameObject _projectilePrefab;
 
-    [Header("Rune Drop")]
-    [SerializeField] private int _runeValue = 1;
+    [Header("Heavy Settings")]
+    [SerializeField] private float _chargeSpeed = 8f;
+    [SerializeField] private float _chargeCooldown = 3f;
 
     [Header("References")]
     [SerializeField] private Transform _player;
+    [SerializeField] private LayerMask _playerLayer;
 
-    private int _currentHealth;
-    private bool _isDead;
     private bool _isGrounded;
-    private float _attackCooldownTimer;
-    private Rigidbody2D _rigidbody;
-    private SpriteRenderer _spriteRenderer;
-    private float _healthMultiplier = 1f;
-    private float _damageMultiplier = 1f;
+    private float _shootTimer;
+    private float _chargeTimer;
+    private bool _isCharging;
+    private float _noHitTimer;
 
-    public int RuneValue => _isElite ? _runeValue * 3 : _runeValue;
-
-    private void Awake()
+    protected override void Awake()
     {
-        _currentHealth = _maxHealth;
-        _rigidbody = GetComponent<Rigidbody2D>();
-        _spriteRenderer = GetComponent<SpriteRenderer>();
-
-        if (_rigidbody != null)
-        {
-            _rigidbody.gravityScale = 3f;
-            _rigidbody.freezeRotation = true;
-        }
+        base.Awake();
 
         if (_groundCheck == null)
         {
@@ -61,11 +47,21 @@ public class EnemyController : MonoBehaviour, IDamageable
 
         if (_isElite)
         {
-            if (_spriteRenderer != null)
-            {
-                _spriteRenderer.color = Color.yellow;
-            }
+            if (_spriteRenderer != null) _spriteRenderer.color = Color.yellow;
             transform.localScale *= 1.3f;
+
+            switch (_enemyType)
+            {
+                case EnemyType.Ranged:
+                    _shootCooldown *= 0.6f;
+                    break;
+                case EnemyType.Heavy:
+                    _knockbackForce *= 1.5f;
+                    break;
+                case EnemyType.Fast:
+                    _moveSpeed *= 1.3f;
+                    break;
+            }
         }
     }
 
@@ -74,28 +70,32 @@ public class EnemyController : MonoBehaviour, IDamageable
         _player = player;
     }
 
-    public void ApplyDifficulty(float hpMult, float dmgMult, float runeMult = 1f)
-    {
-        _healthMultiplier = hpMult;
-        _damageMultiplier = dmgMult;
-        _maxHealth = Mathf.RoundToInt(_maxHealth * _healthMultiplier);
-        _currentHealth = _maxHealth;
-        _damageToPlayer = Mathf.RoundToInt(_damageToPlayer * _damageMultiplier);
-        _runeValue = Mathf.Max(1, Mathf.RoundToInt(_runeValue * runeMult));
-    }
-
     private void Update()
     {
         if (_isDead) return;
 
-        if (_attackCooldownTimer > 0)
+        if (_attackCooldownTimer > 0) _attackCooldownTimer -= Time.deltaTime;
+        if (_shootTimer > 0) _shootTimer -= Time.deltaTime;
+        if (_chargeTimer > 0) _chargeTimer -= Time.deltaTime;
+
+        _isGrounded = Physics2D.OverlapCircle(
+            _groundCheck.position, _groundCheckRadius, _groundLayer);
+
+        switch (_enemyType)
         {
-            _attackCooldownTimer -= Time.deltaTime;
+            case EnemyType.Melee:
+                ChasePlayer();
+                break;
+            case EnemyType.Fast:
+                ChasePlayerAggressive();
+                break;
+            case EnemyType.Heavy:
+                HeavyBehavior();
+                break;
+            case EnemyType.Ranged:
+                RangedBehavior();
+                break;
         }
-
-        _isGrounded = Physics2D.OverlapCircle(_groundCheck.position, _groundCheckRadius, _groundLayer);
-
-        ChasePlayer();
     }
 
     private void ChasePlayer()
@@ -103,78 +103,129 @@ public class EnemyController : MonoBehaviour, IDamageable
         if (_player == null) return;
 
         float directionX = Mathf.Sign(_player.position.x - transform.position.x);
-        _rigidbody.linearVelocity = new Vector2(directionX * _moveSpeed, _rigidbody.linearVelocity.y);
+        _rigidbody.linearVelocity = new Vector2(
+            directionX * _moveSpeed, _rigidbody.linearVelocity.y);
 
         if (_player.position.y > transform.position.y + 1f && _isGrounded)
         {
-            _rigidbody.linearVelocity = new Vector2(_rigidbody.linearVelocity.x, _jumpForce);
+            _rigidbody.linearVelocity = new Vector2(
+                _rigidbody.linearVelocity.x, _jumpForce);
         }
     }
 
-    public void TakeDamage(int amount)
+    private void ChasePlayerAggressive()
     {
-        if (_isDead) return;
+        if (_player == null) return;
 
-        _currentHealth -= amount;
-        if (_currentHealth <= 0)
+        float directionX = Mathf.Sign(_player.position.x - transform.position.x);
+        _rigidbody.linearVelocity = new Vector2(
+            directionX * _moveSpeed, _rigidbody.linearVelocity.y);
+    }
+
+    private void HeavyBehavior()
+    {
+        if (_player == null) return;
+
+        if (_isCharging) return;
+
+        float dist = Vector2.Distance(transform.position, _player.position);
+
+        if (dist < 3f && _chargeTimer <= 0)
         {
-            _isDead = true;
-            StartCoroutine(DieSequence());
+            StartCoroutine(ChargeRoutine());
+            return;
+        }
+
+        float directionX = Mathf.Sign(_player.position.x - transform.position.x);
+        _rigidbody.linearVelocity = new Vector2(
+            directionX * _moveSpeed, _rigidbody.linearVelocity.y);
+    }
+
+    private System.Collections.IEnumerator ChargeRoutine()
+    {
+        _isCharging = true;
+        _chargeTimer = _chargeCooldown;
+
+        float dir = Mathf.Sign(_player.position.x - transform.position.x);
+        float elapsed = 0f;
+        float duration = 0.3f;
+
+        while (elapsed < duration)
+        {
+            _rigidbody.linearVelocity = new Vector2(
+                dir * _chargeSpeed, _rigidbody.linearVelocity.y);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        _isCharging = false;
+    }
+
+    private void RangedBehavior()
+    {
+        if (_player == null) return;
+
+        float dist = Vector2.Distance(transform.position, _player.position);
+
+        if (dist > _preferredDistance + 1f)
+        {
+            float dir = Mathf.Sign(_player.position.x - transform.position.x);
+            _rigidbody.linearVelocity = new Vector2(
+                dir * _moveSpeed, _rigidbody.linearVelocity.y);
+        }
+        else if (dist < _preferredDistance - 1f)
+        {
+            float dir = -Mathf.Sign(_player.position.x - transform.position.x);
+            _rigidbody.linearVelocity = new Vector2(
+                dir * _moveSpeed * 1.5f, _rigidbody.linearVelocity.y);
+        }
+        else
+        {
+            _rigidbody.linearVelocity = new Vector2(
+                0f, _rigidbody.linearVelocity.y);
+
+            if (_shootTimer <= 0)
+            {
+                ShootProjectile();
+                _shootTimer = _shootCooldown;
+            }
+        }
+
+        _noHitTimer += Time.deltaTime;
+        if (_noHitTimer > 5f)
+        {
+            float dir = Mathf.Sign(_player.position.x - transform.position.x);
+            _rigidbody.linearVelocity = new Vector2(
+                dir * _moveSpeed, _rigidbody.linearVelocity.y);
         }
     }
 
-    private System.Collections.IEnumerator DieSequence()
+    private void ShootProjectile()
     {
-        Collider2D col = GetComponent<Collider2D>();
-        if (col != null) col.enabled = false;
+        if (_projectilePrefab == null || _player == null) return;
 
-        _rigidbody.linearVelocity = Vector2.zero;
+        Vector2 dir = (_player.position - transform.position).normalized;
+        GameObject proj = Instantiate(
+            _projectilePrefab, transform.position, Quaternion.identity);
 
-        if (_spriteRenderer != null)
+        EnemyProjectile ep = proj.GetComponent<EnemyProjectile>();
+        if (ep != null)
         {
-            _spriteRenderer.color = Color.red;
-        }
-
-        DropRune();
-
-        yield return new WaitForSeconds(0.3f);
-
-        Destroy(gameObject);
-    }
-
-    private void DropRune()
-    {
-        DungeonGenerator dg = FindFirstObjectByType<DungeonGenerator>();
-        if (dg == null || dg.RunePickupPrefab == null) return;
-
-        GameObject rune = Instantiate(dg.RunePickupPrefab, transform.position, Quaternion.identity);
-        RunePickup pickup = rune.GetComponent<RunePickup>();
-        if (pickup != null)
-        {
-            pickup.Initialize(RuneValue);
+            ep.Initialize(dir, _damageToPlayer, this);
         }
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (_isDead) return;
-        if (other.gameObject.layer != LayerMask.NameToLayer("Player")) return;
+        if (((1 << other.gameObject.layer) & _playerLayer) == 0) return;
         if (_attackCooldownTimer > 0) return;
 
-        PlayerController pc = other.GetComponent<PlayerController>();
-        if (pc != null && pc.IsInvincible) return;
+        ApplyContactDamage(other);
+    }
 
-        IDamageable damageable = other.GetComponent<IDamageable>();
-        if (damageable != null)
-        {
-            damageable.TakeDamage(_damageToPlayer);
-            _attackCooldownTimer = _attackCooldown;
-
-            if (pc != null)
-            {
-                Vector2 knockDir = (other.transform.position - transform.position).normalized;
-                pc.ApplyKnockback(knockDir, _knockbackForce);
-            }
-        }
+    public void OnProjectileHit()
+    {
+        _noHitTimer = 0f;
     }
 }
