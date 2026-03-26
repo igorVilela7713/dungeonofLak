@@ -1,8 +1,8 @@
-# PRD — Fase 8: Sistema de Armas e Identidade de Combate
+# PRD — FASE 9: Inimigos Avançados e Ecossistema de Combate
 
 ## Objetivo
 
-Implementar um sistema de armas modular para o roguelike 2D, onde cada arma (Sword, Spear, Axe, Dagger) possui dados próprios via ScriptableObject, visual distinto, e troca funcional em runtime. O sistema deve substituir os valores hardcoded no `WeaponController` atual por um fluxo data-driven, preparando terreno para pickups, upgrades e reward rooms, sem criar abstrações prematuras.
+Expandir o sistema de inimigos do jogo, que hoje possui apenas um tipo (EnemyController melee chaser), para incluir variedade real de combate com arquétipos distintos (Fast, Heavy, Ranged), inimigos Elite com comportamento diferenciado, e bosses com identidade própria nos andares 5, 10 e 15. O objetivo é que cada tipo de inimigo exija uma resposta diferente do jogador, criando combate não-repetitivo e decisões táticas durante a run.
 
 ---
 
@@ -10,18 +10,21 @@ Implementar um sistema de armas modular para o roguelike 2D, onde cada arma (Swo
 
 | Arquivo | Relevância | Motivo |
 |---------|------------|--------|
-| `Assets/Scripts/Combat/WeaponController.cs` | **alta** | Controller principal de ataque — precisa ser refatorado para ler stats de ScriptableObject ao invés de campos hardcoded |
-| `Assets/Scripts/Combat/SwordHitbox.cs` | **alta** | Hitbox genérica que pode ser reutilizada por todas as armas |
-| `Assets/Scripts/Combat/IDamageable.cs` | **média** | Interface de dano — não precisa mudar, mas é dependência direta |
-| `Assets/Scripts/Combat/PlayerHealth.cs` | **média** | Vida do player — integração indireta via knockback/dano recebido |
-| `Assets/Scripts/Movement/PlayerController.cs` | **alta** | Contém `_facingDirection` usado pelo sistema de ataque; precisa expor direção para o WeaponController direcionar hitbox |
-| `Assets/Scripts/Enemies/EnemyController.cs` | **média** | Recebe dano — deve continuar funcionando sem alteração |
-| `Assets/Scripts/Dungeon/RunUpgradeManager.cs` | **média** | Já tem `DamageMultiplier` — precisa integrar com o novo sistema de armas |
-| `Assets/Scripts/Dungeon/RunUpgradeSO.cs` | **baixa** | Padrão de ScriptableObject usado no projeto — referência para `WeaponDataSO` |
-| `Assets/Scripts/Dungeon/FloorConfigSO.cs` | **baixa** | Outro padrão de ScriptableObject — referência de estrutura |
-| `Assets/Scripts/Core/SaveData.cs` | **baixa** | Pode precisar adicionar campo de arma desbloqueada no futuro |
-| `Assets/Scripts/Dungeon/RunePickup.cs` | **média** | Padrão de pickup existente — referência para `WeaponPickup` |
-| `Assets/Scripts/Rooms/RoomController.cs` | **baixa** | Não deve ser alterado, mas armas podem spawnar em salas de reward |
+| `Assets/Scripts/Enemies/EnemyController.cs` | **alta** | Único script de inimigo atual — monolítico (movimento, vida, dano, morte). Precisa ser refatorado ou estendido para suportar múltiplos arquétipos |
+| `Assets/Scripts/Combat/IDamageable.cs` | **alta** | Interface usada por todos os inimigos e player para receber dano |
+| `Assets/Scripts/Combat/WeaponController.cs` | **média** | Sistema de armas do player — os novos inimigos devem interagir corretamente com knockback e dano das armas |
+| `Assets/Scripts/Combat/SwordHitbox.cs` | **média** | Hitbox de ataque do player — precisa continuar funcionando com novos tipos de inimigo |
+| `Assets/Scripts/Rooms/RoomController.cs` | **alta** | Controla spawn de inimigos por sala — atualmente só suporta 1 prefab de inimigo normal e 1 de elite. Precisa suportar múltiplos tipos |
+| `Assets/Scripts/Rooms/EnemyDeathTracker.cs` | **média** | Componente adicionado dinamicamente para rastrear mortes — precisa funcionar com novos tipos |
+| `Assets/Scripts/Dungeon/DungeonGenerator.cs` | **alta** | Gera andares e salas — precisa expor referências para múltiplos prefabs de inimigo e distribuir tipos por sala |
+| `Assets/Scripts/Dungeon/BossFloorHandler.cs` | **alta** | Spawna boss atualmente como EnemyController com multiplicadores — precisa spawnar bosses reais com controller próprio |
+| `Assets/Scripts/Dungeon/DifficultyScaler.cs` | **média** | Escala HP/dano por andar — precisa funcionar com novos arquétipos (scaling pode diferir por tipo) |
+| `Assets/Scripts/Dungeon/FloorConfigSO.cs` | **média** | ScriptableObject de configuração de andar — pode precisar de campos para controle de spawn de tipos |
+| `Assets/Scripts/Dungeon/FloorManager.cs` | **baixa** | Gerencia progressão de andares — bosses se integram aqui via BossFloorHandler |
+| `Assets/Scripts/Dungeon/RoomType.cs` | **baixa** | Enum de tipos de sala — Elite já existe como tipo |
+| `Assets/Scripts/Movement/PlayerController.cs` | **média** | Player precisa reagir a novos tipos de ataque (projéteis, knockback de heavy) |
+| `Assets/Scripts/Combat/PlayerHealth.cs` | **média** | Sistema de vida do player — dano de novos inimigos se conecta aqui |
+| `Assets/Scripts/Dungeon/RunUpgradeManager.cs` | **baixa** | Multiplicador de dano do player — bosses devem ser balanceados considerando isso |
 
 ---
 
@@ -29,200 +32,223 @@ Implementar um sistema de armas modular para o roguelike 2D, onde cada arma (Swo
 
 | Caminho | Tipo | Motivo |
 |---------|------|--------|
-| `Assets/Prefabs/SwordHitbox.prefab` | Prefab | Hitbox existente — será a base para todas as hitboxes de arma |
-| `Assets/Prefabs/Player.prefab` | Prefab | Player — precisa receber referência ao `WeaponVisualController` e ao novo `WeaponController` refatorado |
-| `Assets/Scripts/Dungeon/FloorConfigSO.cs` | ScriptableObject | Padrão de SO — modelo para `WeaponDataSO` |
-| `Assets/Data/Upgrades/` | Pasta de SOs | Padrão de ScriptableObjects de upgrade — modelo para assets de armas |
-| `Assets/Data/` | Pasta | Local destino para `WeaponDataSO` assets (ex: `Assets/Data/Weapons/`) |
-| `Assets/Prefabs/Room.prefab` | Prefab | Salas onde pickups de arma podem ser spawnados |
-| `Assets/Prefabs/RewardRoom.prefab` | Prefab | Reward room — destino natural para pickups de arma |
+| `Assets/Prefabs/Enemy.prefab` | Prefab | Inimigo base atual — referência para criar novos prefabs |
+| `Assets/Prefabs/EliteEnemy.prefab` | Prefab | Elite atual — será refeito para usar novo sistema |
+| `Assets/Prefabs/BossArena_5.prefab` | Prefab | Arena do Boss 1 — precisa receber o script de boss correto |
+| `Assets/Prefabs/BossArena_10.prefab` | Prefab | Arena do Boss 2 |
+| `Assets/Prefabs/BossArena_15.prefab` | Prefab | Arena do Boss 3 |
+| `Assets/Prefabs/DungeonRoom.prefab` | Prefab | Sala de dungeon — RoomController precisa spawnar tipos variados |
+| `Assets/Prefabs/SwordHitbox.prefab` | Prefab | Hitbox do player — deve continuar funcionando com novos inimigos |
+| `Assets/Scenes/Main.unity` | Scene | Cena principal — DungeonGenerator e referências de prefab são configuradas aqui |
+| `Assets/Data/DefaultFloorConfig.asset` | ScriptableObject | Config de andar — pode precisar de novos campos |
 
 ---
 
 ## Padrões Encontrados no Projeto
 
-### 1. ScriptableObject para dados (padrão RunUpgradeSO)
+### 1. EnemyController atual — monolítico
+O `EnemyController.cs` (180 lines) é o único script de inimigo. Ele concentra:
+- Movimento (chase + jump)
+- HP e dano
+- Detecção de chão
+- Aplicação de dano ao player via `OnTriggerEnter2D`
+- Knockback no player
+- Drop de runas
+- Flag `_isElite` (só muda cor, escala e valor de runas — sem mudança de comportamento)
+- Sequência de morte com coroutine
+
+Não há separação entre lógica de movimento, combate e comportamento. O padrão de IA é apenas "chase horizontal + jump se player estiver acima".
+
+### 2. RoomController — spawn de inimigos
+`RoomController.SpawnCombatEnemies()` instancia `_enemyPrefab` em cada `_spawnPoints` e adiciona `EnemyDeathTracker` dinamicamente. Suporta elite via `_eliteEnemyPrefab` separado mas sem comportamento diferente.
+
 ```csharp
-// Assets/Scripts/Dungeon/RunUpgradeSO.cs
-[CreateAssetMenu(menuName = "Dungeon/Run Upgrade")]
-public class RunUpgradeSO : ScriptableObject
+private void SpawnCombatEnemies()
 {
-    public string upgradeName;
-    public int cost;
-    public UpgradeType upgradeType;
-    public float value;
-    // ...
+    foreach (Transform point in _spawnPoints)
+    {
+        GameObject enemy = Instantiate(_enemyPrefab, point.position, Quaternion.identity);
+        var controller = enemy.GetComponent<EnemyController>();
+        if (controller != null)
+        {
+            controller.Initialize(_player);
+            // ApplyDifficulty...
+        }
+        var tracker = enemy.AddComponent<EnemyDeathTracker>();
+        tracker.Initialize(this);
+        _enemiesAlive++;
+    }
 }
 ```
-**Aplicação**: `WeaponDataSO` deve seguir o mesmo padrão — `[CreateAssetMenu]`, campos públicos simples, um asset por arma.
 
-### 2. WeaponController atual (hardcoded)
-```csharp
-// Assets/Scripts/Combat/WeaponController.cs:7-11
-[SerializeField] private int _damage = 10;
-[SerializeField] private float _attackCooldown = 0.3f;
-[SerializeField] private float _attackDuration = 0.1f;
-[SerializeField] private float _knockbackForce = 2f;
-```
-**Problema**: Valores fixos no Inspector. Não suporta troca de arma em runtime. Cada instância do prefab teria os mesmos valores.
+### 3. DungeonGenerator — referências de prefab
+`DungeonGenerator` tem campos separados para `_enemyPrefab` e `_eliteEnemyPrefab`. Será necessário adicionar campos para novos tipos ou criar um sistema de seleção.
 
-### 3. Hitbox spawn — posição fixa
-```csharp
-// Assets/Scripts/Combat/WeaponController.cs:83
-Vector3 spawnPos = _player.position + _player.right * 0.8f;
-```
-**Problema**: Sempre spawna na direção `_player.right`. Não considera `_facingDirection` do `PlayerController` (que pode ser Vector2.left). Offset hardcoded (`0.8f`) — cada arma precisa de alcance diferente.
+### 4. BossFloorHandler — boss como EnemyController com multiplicadores
+Atualmente spawna o `_bossPrefab` (que é um `EnemyController` normal) e aplica multiplicadores hardcoded (3x HP, 2x DMG, 5x runes). Não há comportamento de boss real.
 
-### 4. Input System — padrão code-based
 ```csharp
-// Assets/Scripts/Combat/WeaponController.cs:23-26
-_attackAction = new InputAction("Attack", InputActionType.Button);
-_attackAction.AddBinding("<Mouse>/leftButton");
-_attackAction.AddBinding("<Keyboard>/enter");
-_attackAction.AddBinding("<Gamepad>/buttonWest");
+ec.ApplyDifficulty(hpMult * 3f, dmgMult * 2f, runeMult * 5f);
 ```
-**Aplicação**: O input de ataque deve permanecer no `WeaponController`. A troca de arma pode usar o mesmo padrão (ex: tecla Q para swap).
 
-### 5. Initialize pattern para runtime setup
-```csharp
-// Assets/Scripts/Combat/SwordHitbox.cs:8
-public void Initialize(WeaponController controller)
-```
-**Aplicação**: `WeaponPickup` e `WeaponVisualController` devem usar `Initialize()` para receber referências.
+### 5. DifficultyScaler — estático e genérico
+Classe estática com multiplicadores lineares por andar. Todos os tipos recebem os mesmos multiplicadores via `ApplyDifficulty`.
 
-### 6. Singleton para managers
+### 6. IDamageable — interface mínima
 ```csharp
-// FloorManager, RunCurrency, RunUpgradeManager, DialogueUI
-public static ClassName Instance { get; private set; }
+public interface IDamageable
+{
+    void TakeDamage(int amount);
+}
 ```
-**Decisão**: O sistema de armas NÃO deve ser singleton. Cada arma é um componente no Player, não um manager global.
+
+Usada por `PlayerHealth`, `EnemyController` e `TrapBase`.
 
 ---
 
 ## Documentação Externa
 
-- **ScriptableObject-based weapon/gun pattern**: Padrão data-driven para armas em Unity. Separar dados (SO) de lógica (component). Fonte: https://github.com/llamacademy/scriptable-object-based-guns
-- **Unity ScriptableObject para config**: `[CreateAssetMenu]` permite criar assets via menu do Unity sem código extra. Documentação oficial: https://docs.unity3d.com/ScriptReference/CreateAssetMenuAttribute.html
-- **Weapon swap em runtime**: Abordagem comum — manter referência ao SO equipado, ler stats quando necessário, trocar visual via child GameObjects ou SpriteRenderer separado.
-- **Roguelike weapon identity (Hades, Dead Cells, Enter the Gungeon)**: Cada arma muda não só números mas também padrão de hitbox, timing e feedback visual. A identidade vem da combinação de dano + alcance + cooldown + knockback + padrão de ataque.
+### Enemy AI Patterns em Unity 2D
+- **State Machine básico**: Idle → Chase → Attack → Retreat é o padrão mais comum para roguelikes 2D. Pode ser implementado com enum + switch no Update, sem precisar de classes separadas de estado.
+- **Ranged enemies**: Precisam de um sistema de projétil simples (GameObject com Rigidbody2D, Collider2D trigger, script de projétil que aplica dano via `IDamageable`).
+- **Boss patterns**: Unity geralmente usa coroutines para sequências de ataque com pausas entre padrões.
+
+### Referências
+- Unity 2D Roguelike tutorial (Enemy AI state pattern)
+- Brackeys-style enemy AI com chase/detection range
+- Projéteis em Unity 2D: `Rigidbody2D` com `linearVelocity` setada uma vez, `OnTriggerEnter2D` para hit detection
+
+### Boas práticas para o contexto deste projeto
+- Manter tudo em scripts simples (1 script por comportamento principal)
+- Usar `[Header]` e `[SerializeField]` para exposição no Inspector
+- Evitar herança complexa — composição com componentes separados
+- Prefabs configurados no Inspector com referências já setadas
 
 ---
 
 ## Componentes Necessários
 
 ### Scripts novos
-- **`WeaponDataSO.cs`** — ScriptableObject com todos os dados de uma arma (dano, cooldown, alcance, knockback, padrão de ataque, sprite placeholder)
-- **`WeaponType.cs`** — Enum: `Sword`, `Spear`, `Axe`, `Dagger`
-- **`AttackPattern.cs`** — Enum: `HorizontalSwing`, `ForwardThrust`, `OverheadSmash`, `QuickStab` (define como a hitbox se comporta)
-- **`WeaponPickup.cs`** — MonoBehaviour para coletar arma no chão (seguir padrão de `RunePickup`)
-- **`WeaponVisualController.cs`** — Controla qual child visual está ativo conforme arma equipada
+- **`EnemyType.cs`** — Enum: `Melee`, `Fast`, `Heavy`, `Ranged`, `Boss1`, `Boss2`, `Boss3`
+- **`EnemyProjectile.cs`** — Script para projétil do inimigo ranged (movimento em linha reta, aplica dano via `IDamageable`, se destroi após hit ou timeout)
+- **`BossMeleeController.cs`** — Boss 1: perseguição agressiva, ataques rápidos em sequência
+- **`BossAreaController.cs`** — Boss 2: ataques em área, controle de espaço, zonas de perigo
+- **`BossHybridController.cs`** — Boss 3: mistura melee + ranged, múltiplos padrões
 
-### Scripts a refatorar
-- **`WeaponController.cs`** — Ler stats de `WeaponDataSO` ao invés de campos hardcoded; usar `PlayerController.FacingDirection` para direcionar hitbox; suportar troca de arma via `EquipWeapon(WeaponDataSO)`
+### Scripts modificados
+- **`EnemyController.cs`** — Adicionar suporte a `EnemyType` com comportamentos variados (velocidade, distância de ataque, padrão de movimento, retreat para ranged). Manter como script único com lógica condicional por tipo, não criar subclasses.
+- **`RoomController.cs`** — Suportar spawn de tipos variados de inimigo (lista de EnemyType com probabilidades)
+- **`DungeonGenerator.cs`** — Expor referências para prefabs de cada tipo de inimigo e distribuir por sala/floor
+- **`DifficultyScaler.cs`** — Suportar multiplicadores diferentes por tipo de inimigo
+- **`BossFloorHandler.cs`** — Spawnar o boss correto com base no andar, usando o script de boss apropriado
 
-### ScriptableObjects (assets)
-- **`WeaponSword.asset`** — Dados da espada (arma padrão)
-- **`WeaponSpear.asset`** — Dados da lança
-- **`WeaponAxe.asset`** — Dados do machado
-- **`WeaponDagger.asset`** — Dados da adaga
+### Prefabs novos
+- **`EnemyFast.prefab`** — Inimigo rápido (baseado em Enemy.prefab, com EnemyType.Fast)
+- **`EnemyHeavy.prefab`** — Inimigo pesado (baseado em Enemy.prefab, com EnemyType.Heavy)
+- **`EnemyRanged.prefab`** — Inimigo ranged (baseado em Enemy.prefab, com EnemyType.Ranged)
+- **`Boss1.prefab`** — Boss melee agressivo
+- **`Boss2.prefab`** — Boss de controle de área
+- **`Boss3.prefab`** — Boss híbrido
+- **`EnemyProjectile.prefab`** — Projétil de inimigo ranged (SpriteRenderer + Rigidbody2D + Collider2D trigger + EnemyProjectile script)
 
-### Prefabs
-- Atualizar **`Player.prefab`** com nova hierarquia de armas visuais (child GameObjects para cada arma placeholder)
-- Criar **`WeaponPickup.prefab`** com collider trigger + WeaponPickup.cs
+### Prefabs modificados
+- **`EliteEnemy.prefab`** — Atualizar para usar novo sistema de elite com comportamento diferenciado
 
-### Modificações existentes
-- **`RunUpgradeManager.cs`** — `DamageMultiplier` deve ser consultado pelo `WeaponController` ao calcular dano final
-- **`SaveData.cs`** — Possivelmente adicionar campo de arma desbloqueada (futuro, não obrigatório agora)
+### ScriptableObjects (opcionais)
+- **`EnemyArchetypeSO`** — ScriptableObject com stats base de cada arquétipo (HP, speed, damage, attack range, behavior parameters). Alternativa: manter tudo no Inspector do prefab para simplicidade.
 
 ---
 
 ## Fluxo Esperado
 
-### Fluxo de combate com sistema de armas
-1. Player inicia com **Sword** equipada (default via `[SerializeField]` no Inspector)
-2. `WeaponController` lê stats do `WeaponDataSO` equipado (dano, cooldown, alcance, knockback, attackPattern)
-3. Ao pressionar ataque, `WeaponController` calcula posição da hitbox baseado em:
-   - `_facingDirection` do `PlayerController`
-   - `_attackRange` do `WeaponDataSO`
-   - `_attackPattern` do `WeaponDataSO` (define offset e tamanho da hitbox)
-4. Hitbox é spawnada, detecta colisão, aplica dano + knockback (com `RunUpgradeManager.DamageMultiplier` aplicado)
-5. Após `_attackDuration`, hitbox é destruída, cooldown começa
+### Fluxo de spawn de inimigos normais
+1. `DungeonGenerator.GenerateFloor()` gera salas com `RoomController`
+2. `RoomController` decide quais tipos de inimigo spawnar com base no andar e tipo de sala
+3. Cada inimigo é instanciado com o prefab correto (`EnemyFast`, `EnemyHeavy`, `EnemyRanged` ou `Enemy` base)
+4. `EnemyController.Initialize()` recebe referência do player
+5. `EnemyController.ApplyDifficulty()` aplica escalonamento do `DifficultyScaler`
+6. Inimigos executam seu comportamento conforme `EnemyType`
+7. Ao morrer, `EnemyDeathTracker.OnDestroy()` notifica `RoomController.OnEnemyKilled()`
 
-### Fluxo de troca de arma
-1. Player coleta `WeaponPickup` (trigger collision)
-2. `WeaponPickup` chama `WeaponController.EquipWeapon(WeaponDataSO)`
-3. `WeaponController` atualiza referência ao SO
-4. `WeaponVisualController` desativa visual antigo, ativa visual novo
-5. Próximo ataque usa novos stats
+### Fluxo de inimigos Elite
+1. Salas `RoomType.Elite` ou salas normais com chance de elite
+2. Spawn de inimigo com `EnemyType` normal mas flag `_isElite = true`
+3. Elite recebe multiplicadores maiores (HP x2.5, Dano x1.5), tamanho aumentado, cor alterada
+4. Elites de ranged podem ter projéteis mais rápidos; elites de heavy podem ter knockback maior
 
-### Fluxo de visual
-1. Player tem child objects: `Visual_Sword`, `Visual_Spear`, `Visual_Axe`, `Visual_Dagger`
-2. Apenas um está ativo por vez
-3. `WeaponVisualController.EquipVisual(WeaponType)` ativa o correto
-4. Inicialmente são sprites placeholder (pode ser sprite vazio colorido, ou SpriteRenderer com cor)
+### Fluxo de boss
+1. `FloorManager` detecta boss floor (5, 10, 15)
+2. `DungeonGenerator.GenerateBossFloor()` instancia arena correspondente
+3. `BossFloorHandler` instancia o prefab de boss correto (não mais um EnemyController genérico)
+4. Boss executa padrões de ataque via coroutines (múltiplos ataques com pausas)
+5. Ao morrer, `BossFloorHandler.OnBossDefeated()` cura player e avança para reward room
+
+### Comportamento por arquétipo
+
+**Melee (base)**: Comportamento atual — chase horizontal, jump se player acima, dano por contato.
+
+**Fast**: Velocidade alta (~3x base), HP baixo (~0.5x), dano médio-baixo. Chase agressivo, sem pausas. Pressão constante.
+
+**Heavy**: Velocidade baixa (~0.5x), HP alto (~3x), dano alto, knockback forte. Chase lento, pausas entre movimentos. Pode ter "charge" (movimento rápido em linha reta por curta distância).
+
+**Ranged**: Velocidade média-baixa, HP médio-baixo. Mantém distância do player (~4-6 unidades). Atira projéteis a intervalos. Se player se aproxima muito, faz retreat rápido.
+
+**Boss 1 (Melee Agressivo)**: Chase constante, ataques rápidos em sequência (2-3 hits com pausa curta). Pode ter ataque especial em área quando HP baixo.
+
+**Boss 2 (Area Control)**: Não chase diretamente. Cria zonas de perigo no chão (áreas com dano over time ou projéteis que caem). Posiciona-se estrategicamente. Alternar entre ativo e passivo.
+
+**Boss 3 (Hybrid)**: Alterna entre melee e ranged. Fase 1: melee com charges. Fase 2 (50% HP): ranged com projéteis múltiplos. Pode ter transição visual.
 
 ---
 
 ## Constraints
 
-- **Simplicidade**: Não criar sistemas genéricos abstratos. Uma classe concreta `WeaponDataSO` com campos simples. Uma classe `WeaponController` que lê do SO. Sem interfaces de arma, sem factory, sem strategy pattern.
-- **Unity 2D**: Projeto é side-scroller 2D com gravidade. Armas são hitboxes temporárias, não projéteis.
-- **Pixel art**: Visual será placeholder por enquanto. O sistema deve funcionar com sprites simples coloridos.
-- **Sem sistemas genéricos**: Não criar um "IWeapon" ou "WeaponBase" abstrato. Cada arma é apenas um `WeaponDataSO` com diferentes valores. O `WeaponController` é único.
-- **Integração real**: Cada arma precisa ser configurável no Inspector via `WeaponDataSO`. Troca visual precisa funcionar com hierarquia de GameObjects filhos no Player.
-- **Input**: Code-based `InputAction` (padrão do projeto). Sem asset de Input Actions.
-- **No namespaces**: Convenção do projeto não usar namespaces.
-- **Allman braces, 4-space indent, `[SerializeField] private`**: Seguir estilo existente.
+- **Simplicidade primeiro**: Manter `EnemyController` como script único com lógica condicional por `EnemyType`, não criar hierarquia de classes. Só bosses ganham scripts próprios.
+- **Sem overengineering**: Não criar sistema genérico de AI com state machines abstratos. Usar enum + switch simples.
+- **Placeholders**: Todos os inimigos usam sprites/cores placeholder. Não depender de arte final.
+- **Consistência com projeto**: Seguir padrões de `[SerializeField]`, `[Header]`, Allman braces, sem namespaces.
+- **Integração real**: Todos os prefabs devem funcionar com `RoomController`, `EnemyDeathTracker`, `DifficultyScaler` existentes.
+- **Performance**: Projéteis devem se auto-destruir após timeout (não acumular objetos). Não usar `FindObjectOfType` em Update.
+- **Balanceamento**: Valores iniciais são aproximados. O importante é a sensação diferente, não números perfeitos.
+- **Unity 2D**: Tudo usa Rigidbody2D, Collider2D, SpriteRenderer. Projéteis usam Rigidbody2D com velocidade linear constante.
 
 ---
 
 ## Riscos / Pontos de Atenção
 
-### Risco 1: Hitbox spawn position com _player.right
-O `WeaponController` atual usa `_player.right` para posicionar hitbox. O `PlayerController` usa `_facingDirection` (Vector2 com -1 ou 1 no X). Se o player estiver virado para a esquerda, `_player.right` ainda aponta para direita (é o eixo X positivo do transform). **Solução**: Usar `_facingDirection` do `PlayerController` para posicionar hitbox corretamente, não `_player.right`.
+### Riscos de integração
+1. **EnemyDeathTracker adicionado dinamicamente**: `RoomController` usa `enemy.AddComponent<EnemyDeathTracker>()` — funciona com qualquer MonoBehaviour que seja destruído. Sem risco aqui.
+2. **BossFloorHandler spawna EnemyController genérico**: Ao trocar para scripts de boss específicos, o `EnemyDeathTracker` e `ApplyDifficulty` precisam ser compatíveis. Solução: bosses podem herdar de `EnemyController` ou implementar `IDamageable` diretamente com `EnemyDeathTracker` separado.
+3. **DungeonGenerator tem referências hardcoded**: Adicionar novos campos de prefab (`_enemyFastPrefab`, etc.) requer configurar no Inspector da cena Main.unity.
+4. **Projéteis e layers**: Projéteis de inimigo precisam estar em layer correta para não colidir com outros inimigos. Verificar configuração de layers no projeto.
+5. **RoomController._enemyPrefab único**: Atualmente cada sala tem 1 tipo de inimigo. Para misturar tipos na mesma sala, precisar de lógica adicional no spawn.
 
-### Risco 2: RunUpgradeManager.DamageMultiplier não integrado
-O `RunUpgradeManager` já calcula um `DamageMultiplier`, mas o `WeaponController` atual lê `_damage` diretamente do Inspector. Se não integrarmos, upgrades de dano não afetarão as armas. **Solução**: `WeaponController.OnHitboxTrigger` deve consultar `RunUpgradeManager.Instance.GetDamageMultiplier()` ao calcular dano final (se a instância existir).
+### Edge cases
+- Inimigo ranged com projétil que não acerta nada (timeout no projétil)
+- Boss morrendo durante animação de ataque (parar coroutines)
+- Elite ranged que fica preso em loop de retreat se player não se aproxima
+- Heavy enemy que não consegue alcançar player em plataforma alta (precisa de jump ou pathfinding simples)
+- Múltiplos projéteis na tela ao mesmo tempo (performance)
 
-### Risco 3: Troca de arma durante ataque
-Se o player trocar de arma enquanto o ataque está em andamento (hitbox ativa), a hitbox antiga pode aplicar dano com stats errados ou ser destruída abruptamente. **Solução**: Bloquear troca de arma enquanto `_isAttacking == true`, ou destruir hitbox ativa antes de trocar.
-
-### Risco 4: SwordHitbox prefab — tamanho fixo
-O `SwordHitbox.prefab` tem um tamanho de collider fixo. Armas com alcance diferente (spear > sword > dagger) precisam de hitboxes com tamanhos diferentes. **Solução**: No `SpawnHitbox()`, ajustar `localScale` da hitbox baseado no `_attackRange` do SO, OU criar hitboxes com tamanho base 1x1 e escalar via código.
-
-### Risco 5: Player sempre deve ter arma
-O player nunca deve ficar sem arma equipada. Se o `WeaponDataSO` default não estiver atribuído no Inspector, o ataque pode quebrar. **Solução**: Verificação em `Awake()` — se `_equippedWeapon == null`, logar erro e não permitir ataque.
-
-### Risco 6: DontDestroyOnLoad e referências
-`FloorManager`, `RunCurrency`, `RunUpgradeManager` usam `DontDestroyOnLoad`. O `WeaponController` está no Player que pode ser recriado entre cenas. Referências a SOs são seguras (assets são sempre válidos), mas referências a componentes podem quebrar. **Solução**: Usar `FindFirstObjectByType` ou tag para reencontrar referências se necessário.
-
-### Risco 7: Setup na Unity
-- Os assets de `WeaponDataSO` precisam ser criados manualmente via `Create > Dungeon > Weapon Data`
-- O prefab do Player precisa ser atualizado com a hierarquia de visuals
-- Os campos do `WeaponController` no Inspector precisam ser reconfigurados (remover campos antigos, adicionar referência ao SO)
-- Testar em Play Mode após cada arma adicionada
+### Problemas comuns
+- Projétil passando through de paredes (precisa de layer collision matrix correto)
+- Boss com HP muito alto ficando tedioso (balancear com dano das armas do player)
+- Inimigos se empilhando uns nos outros (ignorar colisão entre inimigos no Rigidbody2D)
 
 ---
 
 ## Decisões a Tomar
 
-### D1: Onde armazenar a arma equipada?
-**Opção A**: Campo `[SerializeField]` no `WeaponController` — simples, configurável no Inspector. O player sempre inicia com a mesma arma. **Opção B**: Campo no `GameManager` ou singleton — permite persistir arma entre cenas. **Recomendação**: Opção A por simplicidade. O Player prefab já é DontDestroyOnLoad implícito via FloorManager pattern.
+1. **Herança vs composição para arquétipos**: Criar subclasses de `EnemyController` (`EnemyFast`, `EnemyHeavy`) ou manter tudo em `EnemyController` com switch por `EnemyType`? **Recomendação**: Manter em `EnemyController` único para simplicidade. Só bosses ganham scripts próprios por terem padrões complexos demais.
 
-### D2: AttackPattern — como implementar?
-**Opção A**: Enum que define apenas o offset de spawn da hitbox (HorizontalSwing = offset horizontal, ForwardThrust = offset mais à frente). Hitbox sempre é um retângulo. **Opção B**: Enum + cada padrão tem hitbox prefab próprio. **Recomendação**: Opção A por simplicidade. Um único `SwordHitbox` (renomeado para `WeaponHitbox`) com `localScale` ajustado via código.
+2. **ScriptableObject para arquétipos ou Inspector?** Usar `EnemyArchetypeSO` para centralizar stats de cada tipo, ou configurar direto nos prefabs? **Recomendação**: Configurar nos prefabs via Inspector para simplicidade. ScriptableObject só se for reutilizar os mesmos stats em muitos prefabs.
 
-### D3: WeaponPickup — como spawnar?
-**Opção A**: Prefab configurável com campo `WeaponDataSO` no Inspector — cada pickup define qual arma entrega. Spawnado pelo `DungeonGenerator` ou `RoomController`. **Opção B**: Sistema de pool de armas desbloqueadas — o jogo escolhe aleatoriamente. **Recomendação**: Opção A. Controle manual no Inspector. Sem pool por enquanto.
+3. **Sistema de projétil genérico ou específico?** Criar um `Projectile.cs` genérico ou `EnemyProjectile.cs` específico? **Recomendação**: `EnemyProjectile.cs` específico por enquanto. Generalizar depois se player também tiver projéteis.
 
-### D4: Visual — hierarchy ou SpriteRenderer swap?
-**Opção A**: Child GameObjects (`Visual_Sword`, etc.) — ativar/desativar. **Opção B**: SpriteRenderer no Player com sprite trocado via código. **Recomendação**: Opção A. Mais simples de configurar no Inspector, não precisa carregar sprites via Resources ou endereçáveis.
+4. **Composição de salas com tipos mistos**: Cada sala spawna apenas 1 tipo de inimigo, ou pode misturar? **Recomendação**: Começar com 1 tipo por sala para simplificar. Misturar depois via lista de possibilidades com pesos.
 
-### D5: Armas desbloqueadas permanentemente — implementar agora?
-**Opção A**: Sim — campo `List<WeaponType> unlockedWeapons` em algum lugar. **Opção B**: Não — todas as armas estão sempre disponíveis via pickups. **Recomendação**: Opção B por agora. Preparar campo, mas não implementar lógica de unlock. Deixar para Fase 11 (Meta Progression).
+5. **Boss como EnemyController estendido ou script separado?** Bosses podem herdar de `EnemyController` (reutilizando HP, TakeDamage, morte) e adicionar lógica de padrões, ou ser scripts completamente separados que implementam `IDamageable`. **Recomendação**: Scripts separados (`BossMeleeController`, etc.) que implementam `IDamageable` — bosses têm lógica complexa demais para caber em switch/case.
 
-### D6: Renomear SwordHitbox para WeaponHitbox?
-O `SwordHitbox` será usado por todas as armas, não só a espada. **Recomendação**: Sim, renomear para `WeaponHitbox` e atualizar referências no prefab e no `WeaponController`. Ou manter como `SwordHitbox` por simplicidade (só um nome) e adicionar comentário de que é genérico. Decisão do desenvolvedor.
+6. **Elite como comportamento diferente ou só stats?** O plano diz que elite deve ter "ataque especial / maior agressividade". Isso significa comportamento diferente de verdade (ex: ranged elite atira 2 projéteis) ou basta stats maiores? **Recomendação**: Comportamento ligeiramente diferente por tipo. Ranged elite atira mais rápido, heavy elite tem knockback maior, fast elite tem speed ainda maior.
 
-### D7: Onde colocar o offset de ataque — no SO ou no AttackPattern?
-**Opção A**: `_attackRange` no SO define distância do centro. `AttackPattern` define direção relativa. **Opção B**: Cada arma define offset completo (Vector2) no SO. **Recomendação**: Opção A. Mais limpo e permite ajuste independente de alcance vs. padrão.
+7. **Scaling diferenciado por tipo?** `DifficultyScaler` aplica mesmo multiplicador para todos. Deveria ter multiplicadores diferentes por tipo (ex: heavy escala mais em HP, fast escala mais em speed)? **Recomendação**: Multiplicadores base do DifficultyScaler + fator fixo por tipo aplicado no prefab/EnemyController. Não mudar DifficultyScaler agora.

@@ -1,34 +1,32 @@
-# SPEC — Fase 8: Sistema de Armas
+# SPEC — FASE 9: Inimigos Avançados e Ecossistema de Combate
 
-## Decisões tomadas
+## Contratos Obrigatórios
 
-| # | Decisão | Escolha |
-|---|---------|---------|
-| D1 | Onde armazenar arma equipada | `[SerializeField]` no WeaponController — player prefab carrega default |
-| D2 | AttackPattern implementation | Enum + ajustar `localScale` da hitbox via código (um único prefab) |
-| D3 | WeaponPickup spawn | Prefab com campo `WeaponDataSO` no Inspector — controle manual |
-| D4 | Sistema visual | Child GameObjects (`Visual_Sword`, etc.) — ativar/desativar |
-| D5 | Unlock permanente | Não agora — todas as armas via pickups. Deixar para Fase 11 |
-| D6 | Renomear SwordHitbox | Manter nome `SwordHitbox` agora — funciona para todas as armas, menos refactoring. Renomear para `WeaponHitbox` quando a fase estabilizar (anotado como TODO futuro). |
-| D7 | Offset de ataque | `_attackRange` no SO + `AttackPattern` define direção relativa |
-| D8 | Hitbox size base | Prefab ajustado para Size = 0.8. Campo `BaseHitboxSize = 0.8f` no WeaponController |
-| D9 | Swap de arma | Implementar `availableWeapons` + `currentWeaponIndex` agora. Q cicla entre disponíveis |
-| D10 | Visual placeholder | Child visual por arma (forma geométrica + cor). Não usar sprite de idle puro |
-| D11 | DamageMultiplier | Global da run. Aplica no hit. Continua após troca de arma. Separar de weapon-specific no futuro |
-| D12 | Cena de teste | Criar `WeaponTestScene.unity` dedicada |
-
----
+- Todo inimigo: deve herdar `EnemyBase` e implementar `IDamageable`
+- Todo boss: deve herdar `EnemyBase`, implementar `IDamageable` e `IBoss`
+- `OnDeath()` é o ponto real de morte. `Destroy` é apenas cleanup.
+- Valores NÃO devem ser hardcoded em múltiplos lugares — usar `[SerializeField]` sempre
 
 ## Arquivos a Criar
 
 | Path | Tipo | Descrição |
 |------|------|-----------|
-| `Assets/Scripts/Combat/WeaponType.cs` | Enum | `Sword`, `Spear`, `Axe`, `Dagger` |
-| `Assets/Scripts/Combat/AttackPattern.cs` | Enum | `HorizontalSwing`, `ForwardThrust`, `OverheadSmash`, `QuickStab` |
-| `Assets/Scripts/Combat/WeaponDataSO.cs` | ScriptableObject | Dados de uma arma (dano, cooldown, alcance, knockback, pattern, visual) |
-| `Assets/Scripts/Combat/WeaponVisualController.cs` | MonoBehaviour | Ativa/desativa child visual conforme arma equipada |
-| `Assets/Scripts/Combat/WeaponPickup.cs` | MonoBehaviour | Trigger que equipa arma ao player |
-| `Assets/Scenes/WeaponTestScene.unity` | Scene | Cena dedicada para testar sistema de armas |
+| `Assets/Scripts/Enemies/EnemyType.cs` | Enum | `Melee`, `Fast`, `Heavy`, `Ranged` |
+| `Assets/Scripts/Enemies/EnemyBase.cs` | Classe base (MonoBehaviour, IDamageable) | TakeDamage, OnDeath, Drop de runas, HP |
+| `Assets/Scripts/Enemies/EnemyProjectile.cs` | MonoBehaviour | Projétil — Rigidbody2D velocity, ignora Enemy layer |
+| `Assets/Scripts/Bosses/IBoss.cs` | Interface | `void Initialize(Transform player)` |
+| `Assets/Scripts/Bosses/BossMeleeController.cs` | MonoBehaviour (herda EnemyBase, IBoss) | Boss 1 (andar 5) |
+| `Assets/Scripts/Bosses/BossAreaController.cs` | MonoBehaviour (herda EnemyBase, IBoss) | Boss 2 (andar 10) |
+| `Assets/Scripts/Bosses/BossHybridController.cs` | MonoBehaviour (herda EnemyBase, IBoss) | Boss 3 (andar 15) |
+| `Assets/Scripts/Bosses/DangerZone.cs` | MonoBehaviour | Zona de perigo — dano por tick, auto-destroy |
+| `Assets/Prefabs/EnemyFast.prefab` | Prefab | Inimigo rápido |
+| `Assets/Prefabs/EnemyHeavy.prefab` | Prefab | Inimigo pesado |
+| `Assets/Prefabs/EnemyRanged.prefab` | Prefab | Inimigo ranged |
+| `Assets/Prefabs/EnemyProjectile.prefab` | Prefab | Projétil inimigo |
+| `Assets/Prefabs/DangerZone.prefab` | Prefab | Zona de perigo (Boss2) |
+| `Assets/Prefabs/Boss1.prefab` | Prefab | Boss melee agressivo |
+| `Assets/Prefabs/Boss2.prefab` | Prefab | Boss area control |
+| `Assets/Prefabs/Boss3.prefab` | Prefab | Boss híbrido |
 
 ---
 
@@ -36,456 +34,474 @@
 
 | Path | Mudanças |
 |------|----------|
-| `Assets/Scripts/Combat/WeaponController.cs` | Substituir campos hardcoded por leitura de `WeaponDataSO`. Adicionar `EquipWeapon()`, `availableWeapons` list, `currentWeaponIndex`, `BaseHitboxSize`. Usar `PlayerController.FacingDirection`. Integrar `RunUpgradeManager.DamageMultiplier`. Input de swap (tecla Q) com lógica de ciclo real. |
-| `Assets/Scripts/Dungeon/RunUpgradeManager.cs` | Nenhuma mudança estrutural — já funciona. DamageMultiplier é global da run e aplica no momento do hit. |
+| `Assets/Scripts/Enemies/EnemyController.cs` | Herdar de `EnemyBase`. Remover TakeDamage, DieSequence, DropRune, campos de vida. Adicionar `_enemyType`, campos ranged/heavy. Métodos isolados: ChasePlayer, ChasePlayerAggressive, HeavyBehavior, RangedBehavior. Padronizar TODOS os layer checks para `[SerializeField] LayerMask _playerLayer`. |
+| `Assets/Scripts/Rooms/RoomController.cs` | Adicionar `GameObject[] _enemyPrefabs`. `SetEnemyPrefabs()`. `SpawnCombatEnemies()` seleciona aleatório do array. Padronizar layer check. |
+| `Assets/Scripts/Dungeon/DungeonGenerator.cs` | Adicionar `_enemyFastPrefab`, `_enemyHeavyPrefab`, `_enemyRangedPrefab`. `GetEnemyPrefabsForFloor(floor)`. |
+| `Assets/Scripts/Dungeon/BossFloorHandler.cs` | `GameObject[] _bossPrefabs`. `GetComponent<IBoss>()?.Initialize()`. |
+| `Assets/Scripts/Dungeon/FloorConfigSO.cs` | (Opcional) `_eliteChancePerFloor`. |
 
 ---
 
-## Pré-condições
+## Regras de Comportamento
 
-Antes de implementar, confirmar:
+| Tipo | Regra |
+|------|-------|
+| Ranged | Nunca fica parado infinitamente. Sempre tenta reposicionar se não acertar. |
+| Heavy | Sempre tem charge disponível. |
+| Fast | Nunca pausa durante chase. |
+| Boss | Flag `_isActive` garante que coroutine inicia apenas uma vez. |
 
-1. **`RunUpgradeManager.GetDamageMultiplier()`** existe como propriedade/método público e retorna `float`. Singleton acessível via `RunUpgradeManager.Instance`. (Confirmado no código atual: `RunUpgradeManager.cs:88-91`.)
-2. **`PlayerController.FacingDirection`** existe como `Vector2` e nunca é zero — quando o player para, mantém a última direção válida. (Confirmado no código atual: `PlayerController.cs:21,28,90-93` — `_facingDirection` só atualiza quando `_horizontalInput != 0`, caso contrário retém valor anterior.)
-   > **Nota de escopo:** Nesta fase, `FacingDirection` é sempre horizontal (esquerda/direita) — o player usa física 2D com gravidade, não top-down. `GetAttackOffset` usa apenas `facingDir.x`. Suporte completo a ataque vertical ou 8 direções fica para fase posterior.
-3. **`PlayerController.ApplyKnockback(Vector2, float)`** existe e é usado pelo `EnemyController` para knockback do player. (Confirmado: `PlayerController.cs:96-99`, `EnemyController.cs:176`.)
-4. **Cada arma base terá um único `WeaponDataSO`** — não criar dois assets diferentes para a mesma `WeaponType`. A lista `_availableWeapons` compara por referência do SO.
-5. **`IDamageable.TakeDamage(int amount)`** é o contrato mínimo para receber dano da arma. Qualquer inimigo, boss, dummy ou objeto destrutível que implemente essa interface será acertado pelo `OnHitboxTrigger`. Manter a interface enxuta (apenas `TakeDamage`).
+## Regras de Spawn
 
----
-
-## Implementação passo a passo
-
-### Passo 1 — Enums (`WeaponType.cs` e `AttackPattern.cs`)
-
-**Arquivo:** `Assets/Scripts/Combat/WeaponType.cs`
-
-```csharp
-public enum WeaponType
-{
-    Sword,
-    Spear,
-    Axe,
-    Dagger
-}
-```
-
-**Arquivo:** `Assets/Scripts/Combat/AttackPattern.cs`
-
-```csharp
-public enum AttackPattern
-{
-    HorizontalSwing,
-    ForwardThrust,
-    OverheadSmash,
-    QuickStab
-}
-```
-
-São arquivos independentes, sem dependências. Criar primeiro.
-
-> **Nota sobre escopo do AttackPattern:** O enum atual controla apenas offset e feeling inicial do ataque. Animação, arco real de swing e multi-stage attacks ficam para fase posterior — não tentar expandir o padrão nesta fase.
+- Room nunca pode spawnar apenas ranged OU apenas heavy
+- Sempre balanceado: Melee deve estar presente na pool junto com tipos avançados
+- Distribuição controlada por floor (tabela abaixo)
 
 ---
 
-### Passo 2 — WeaponDataSO
-
-**Arquivo:** `Assets/Scripts/Combat/WeaponDataSO.cs`
-
-ScriptableObject que centraliza TODOS os dados de uma arma. Segue o padrão de `RunUpgradeSO`.
+## EnemyBase — Classe Compartilhada
 
 ```csharp
+// Assets/Scripts/Enemies/EnemyBase.cs
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Combat/Weapon Data")]
-public class WeaponDataSO : ScriptableObject
+[RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(Collider2D))]
+public class EnemyBase : MonoBehaviour, IDamageable
 {
-    [Header("Identity")]
-    public WeaponType weaponType;
-    public string weaponName;
+    [Header("Health")]
+    [SerializeField] protected int _maxHealth = 30;
 
-    [Header("Stats")]
-    public int damage = 10;
-    public float attackCooldown = 0.3f;
-    public float attackDuration = 0.1f;
-    public float attackRange = 0.8f;
-    public float knockbackForce = 2f;
+    [Header("Combat")]
+    [SerializeField] protected int _damageToPlayer = 10;
+    [SerializeField] protected float _attackCooldown = 1f;
+    [SerializeField] protected float _knockbackForce = 5f;
 
-    [Header("Attack Pattern")]
-    public AttackPattern attackPattern = AttackPattern.HorizontalSwing;
+    [Header("Elite")]
+    [SerializeField] protected bool _isElite = false;
 
-    [Header("Visual")]
-    public Color placeholderColor = Color.white;
-}
-```
+    [Header("Rune Drop")]
+    [SerializeField] protected int _runeValue = 1;
 
-**Campos e por quê:**
-- `weaponType` — identificador para o `WeaponVisualController` saber qual child ativar
-- `damage`, `attackCooldown`, `attackDuration`, `knockbackForce` — substituem os campos hardcoded do `WeaponController` atual
-- `attackRange` — substitui o `0.8f` hardcoded na linha 83 do `WeaponController`. Spear > Sword > Dagger
-- `attackPattern` — define como a hitbox é posicionada (veja Passo 3)
-- `placeholderColor` — cor do visual placeholder da arma (child marker no player)
+    protected int _currentHealth;
+    protected bool _isDead;
+    protected float _attackCooldownTimer;
+    protected Rigidbody2D _rigidbody;
+    protected SpriteRenderer _spriteRenderer;
+    protected float _healthMultiplier = 1f;
+    protected float _damageMultiplier = 1f;
 
-**Imports:** Apenas `UnityEngine`. Sem dependências.
+    public int RuneValue => _isElite ? _runeValue * 3 : _runeValue;
+    public bool IsDead => _isDead;
 
-> **Nota sobre serialização:** Campos `public` no SO é uma concessão de velocidade para protótipo. Em produção, preferir `[SerializeField] private` com propriedades read-only. Manter como está por enquanto.
-
----
-
-### Passo 3 — Refatorar WeaponController
-
-**Arquivo:** `Assets/Scripts/Combat/WeaponController.cs`
-
-Substituir o conteúdo atual. O que muda:
-
-1. **Remover** campos hardcoded: `_damage`, `_attackCooldown`, `_attackDuration`, `_knockbackForce`
-2. **Adicionar** `[SerializeField] private WeaponDataSO _defaultWeapon` — arma inicial
-3. **Adicionar** `[SerializeField] private WeaponVisualController _visualController` — referência ao visual
-4. **Adicionar** `private WeaponDataSO _equippedWeapon` — arma atual (setado em Awake com default)
-5. **Adicionar** `private List<WeaponDataSO> _availableWeapons` — lista de armas disponíveis para ciclo
-6. **Adicionar** `private int _currentWeaponIndex` — índice na lista
-7. **Adicionar** constante `private const float BaseHitboxSize = 0.8f` — tamanho base do prefab (evita hardcode escondido)
-8. **Adicionar** input de swap (tecla Q) — ciclo real entre armas disponíveis
-9. **Corrigir** `SpawnHitbox()` para usar `_player.GetComponent<PlayerController>().FacingDirection` ao invés de `_player.right`
-10. **Corrigir** `SpawnHitbox()` para usar `_equippedWeapon.attackRange` ao invés de `0.8f`
-11. **Adicionar** `SpawnHitbox()` — ajustar `localScale` da hitbox conforme `_equippedWeapon.attackRange / BaseHitboxSize`
-12. **Integrar** `OnHitboxTrigger()` — consultar `RunUpgradeManager.Instance.GetDamageMultiplier()` para dano final (global da run, mantém após troca de arma)
-13. **Adicionar** `EquipWeapon(WeaponDataSO weapon)` — troca arma, bloqueia se `_isAttacking`, adiciona na lista se não existe
-14. **Adicionar** propriedades públicas: `EquippedWeapon`
-
-**Código completo:**
-
-```csharp
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.InputSystem;
-
-public class WeaponController : MonoBehaviour
-{
-    private const float BaseHitboxSize = 0.8f;
-
-    [Header("Setup")]
-    [SerializeField] private WeaponDataSO _defaultWeapon;
-    [SerializeField] private GameObject _hitboxPrefab;
-    [SerializeField] private Transform _player;
-    [SerializeField] private WeaponVisualController _visualController;
-
-    private WeaponDataSO _equippedWeapon;
-    private bool _isAttacking;
-    private float _cooldownTimer;
-    private InputAction _attackAction;
-    private InputAction _swapAction;
-    private GameObject _activeHitbox;
-    private PlayerController _playerController;
-
-    private readonly List<WeaponDataSO> _availableWeapons = new List<WeaponDataSO>();
-    private int _currentWeaponIndex;
-
-    public bool IsAttacking => _isAttacking;
-    public WeaponDataSO EquippedWeapon => _equippedWeapon;
-
-    private void Awake()
+    protected virtual void Awake()
     {
-        if (_defaultWeapon != null)
+        _currentHealth = _maxHealth;
+        _rigidbody = GetComponent<Rigidbody2D>();
+        _spriteRenderer = GetComponent<SpriteRenderer>();
+
+        if (_rigidbody != null)
         {
-            _equippedWeapon = _defaultWeapon;
-            _availableWeapons.Add(_defaultWeapon);
-            _currentWeaponIndex = 0;
-        }
-        else
-        {
-            Debug.LogError("WeaponController: _defaultWeapon não atribuído no Inspector!");
-        }
-
-        _playerController = _player.GetComponent<PlayerController>();
-
-        _attackAction = new InputAction("Attack", InputActionType.Button);
-        _attackAction.AddBinding("<Mouse>/leftButton");
-        _attackAction.AddBinding("<Keyboard>/enter");
-        _attackAction.AddBinding("<Gamepad>/buttonWest");
-
-        _swapAction = new InputAction("SwapWeapon", InputActionType.Button);
-        _swapAction.AddBinding("<Keyboard>/q");
-        _swapAction.AddBinding("<Gamepad>/buttonNorth");
-
-        if (_visualController != null && _equippedWeapon != null)
-        {
-            _visualController.EquipVisual(_equippedWeapon.weaponType);
+            _rigidbody.gravityScale = 3f;
+            _rigidbody.freezeRotation = true;
         }
     }
 
-    private void OnEnable()
+    public void ApplyDifficulty(float hpMult, float dmgMult, float runeMult = 1f)
     {
-        _attackAction.Enable();
-        _attackAction.performed += OnAttackPerformed;
-        _swapAction.Enable();
-        _swapAction.performed += OnSwapPerformed;
+        _healthMultiplier = hpMult;
+        _damageMultiplier = dmgMult;
+        _maxHealth = Mathf.RoundToInt(_maxHealth * _healthMultiplier);
+        _currentHealth = _maxHealth;
+        _damageToPlayer = Mathf.RoundToInt(_damageToPlayer * _damageMultiplier);
+        _runeValue = Mathf.Max(1, Mathf.RoundToInt(_runeValue * runeMult));
     }
 
-    private void OnDisable()
+    public virtual void TakeDamage(int amount)
     {
-        _attackAction.performed -= OnAttackPerformed;
-        _attackAction.Disable();
-        _swapAction.performed -= OnSwapPerformed;
-        _swapAction.Disable();
-    }
+        if (_isDead) return;
 
-    private void OnAttackPerformed(InputAction.CallbackContext context)
-    {
-        Attack();
-    }
-
-    private void OnSwapPerformed(InputAction.CallbackContext context)
-    {
-        CycleWeapon();
-    }
-
-    private void Update()
-    {
-        if (_cooldownTimer > 0)
+        _currentHealth -= amount;
+        if (_currentHealth <= 0)
         {
-            _cooldownTimer -= Time.deltaTime;
+            _isDead = true;
+            OnDeath();
         }
     }
 
-    public void Attack()
+    protected virtual void OnDeath()
     {
-        if (_isAttacking) return;
-        if (_cooldownTimer > 0) return;
-        if (_equippedWeapon == null) return;
+        Collider2D col = GetComponent<Collider2D>();
+        if (col != null) col.enabled = false;
 
-        _isAttacking = true;
-        SpawnHitbox();
-        StartCoroutine(AttackRoutine());
-    }
+        _rigidbody.linearVelocity = Vector2.zero;
 
-    private System.Collections.IEnumerator AttackRoutine()
-    {
-        yield return new WaitForSeconds(_equippedWeapon.attackDuration);
-        if (_activeHitbox != null)
+        if (_spriteRenderer != null)
         {
-            Destroy(_activeHitbox);
-            _activeHitbox = null;
-        }
-        _isAttacking = false;
-        _cooldownTimer = _equippedWeapon.attackCooldown;
-    }
-
-    private void SpawnHitbox()
-    {
-        if (_activeHitbox != null)
-        {
-            Destroy(_activeHitbox);
+            _spriteRenderer.color = Color.red;
         }
 
-        Vector2 dir = _playerController != null ? _playerController.FacingDirection : Vector2.right;
-        Vector3 offset = GetAttackOffset(dir);
+        DropRune();
 
-        Vector3 spawnPos = _player.position + offset;
-        _activeHitbox = Instantiate(_hitboxPrefab, spawnPos, Quaternion.identity, _player);
-
-        float hitboxScale = _equippedWeapon.attackRange / BaseHitboxSize;
-        _activeHitbox.transform.localScale = new Vector3(hitboxScale, hitboxScale, 1f);
-
-        SwordHitbox swordHitbox = _activeHitbox.GetComponent<SwordHitbox>();
-        swordHitbox.Initialize(this);
+        Destroy(gameObject, 0.3f);
     }
 
-    private Vector3 GetAttackOffset(Vector2 facingDir)
+    protected virtual void DropRune()
     {
-        float range = _equippedWeapon.attackRange;
+        DungeonGenerator dg = FindFirstObjectByType<DungeonGenerator>();
+        if (dg == null || dg.RunePickupPrefab == null) return;
 
-        switch (_equippedWeapon.attackPattern)
+        GameObject rune = Instantiate(dg.RunePickupPrefab, transform.position, Quaternion.identity);
+        RunePickup pickup = rune.GetComponent<RunePickup>();
+        if (pickup != null)
         {
-            case AttackPattern.HorizontalSwing:
-                return new Vector3(facingDir.x * range, 0.2f, 0f);
-            case AttackPattern.ForwardThrust:
-                return new Vector3(facingDir.x * (range + 0.2f), 0f, 0f);
-            case AttackPattern.OverheadSmash:
-                return new Vector3(facingDir.x * 0.3f, range * 0.5f, 0f);
-            case AttackPattern.QuickStab:
-                return new Vector3(facingDir.x * range, 0f, 0f);
-            default:
-                return new Vector3(facingDir.x * range, 0f, 0f);
+            pickup.Initialize(RuneValue);
         }
     }
 
-    public void OnHitboxTrigger(Collider2D other)
+    protected virtual void ApplyContactDamage(Collider2D other)
     {
-        if (_equippedWeapon == null) return;
+        if (_isDead) return;
+        if (_attackCooldownTimer > 0) return;
+
+        PlayerController pc = other.GetComponent<PlayerController>();
+        if (pc != null && pc.IsInvincible) return;
 
         IDamageable damageable = other.GetComponent<IDamageable>();
         if (damageable != null)
         {
-            int finalDamage = _equippedWeapon.damage;
+            damageable.TakeDamage(_damageToPlayer);
+            _attackCooldownTimer = _attackCooldown;
 
-            // Multiplicador global da run — aplica no hit, mantém após troca de arma.
-            // Se RunUpgradeManager não existe na cena, multiplicador = 1f (dano base do SO).
-            if (RunUpgradeManager.Instance != null)
+            if (pc != null)
             {
-                finalDamage = Mathf.RoundToInt(finalDamage * RunUpgradeManager.Instance.GetDamageMultiplier());
+                Vector2 knockDir = (other.transform.position - transform.position).normalized;
+                pc.ApplyKnockback(knockDir, _knockbackForce);
             }
-
-            damageable.TakeDamage(finalDamage);
-
-            // Knockback: usa AddForce direto no Rigidbody2D do alvo.
-            // TODO futuro: expor ApplyKnockback(Vector2, float) em interface IKnockbackable
-            // para que o inimigo controle como reage (massa, estado, resistência).
-            Rigidbody2D rb = other.GetComponent<Rigidbody2D>();
-            if (rb != null)
-            {
-                Vector2 knockDir = (other.transform.position - _player.position).normalized;
-                rb.AddForce(knockDir * _equippedWeapon.knockbackForce, ForceMode2D.Impulse);
-            }
-        }
-    }
-
-    public void EquipWeapon(WeaponDataSO weapon)
-    {
-        if (weapon == null) return;
-
-        // Sempre adicionar na lista se não existe — mesmo durante ataque
-        if (!_availableWeapons.Contains(weapon))
-        {
-            _availableWeapons.Add(weapon);
-        }
-
-        // Se estiver atacando, não equipar agora — arma entra no ciclo de Q
-        if (_isAttacking) return;
-
-        _equippedWeapon = weapon;
-        _currentWeaponIndex = _availableWeapons.IndexOf(weapon);
-
-        if (_visualController != null)
-        {
-            _visualController.EquipVisual(weapon.weaponType);
-        }
-    }
-
-    private void CycleWeapon()
-    {
-        if (_availableWeapons.Count <= 1) return;
-        if (_isAttacking) return;
-
-        _currentWeaponIndex = (_currentWeaponIndex + 1) % _availableWeapons.Count;
-        _equippedWeapon = _availableWeapons[_currentWeaponIndex];
-
-        if (_visualController != null)
-        {
-            _visualController.EquipVisual(_equippedWeapon.weaponType);
         }
     }
 }
 ```
 
-**Mudanças críticas vs. código atual:**
-- Linha 83 atual (`_player.position + _player.right * 0.8f`) → `GetAttackOffset(facingDir)` com `FacingDirection` + `attackRange`
-- Linha 94 atual (`TakeDamage(_damage)`) → cálculo com `RunUpgradeManager.GetDamageMultiplier()` (global da run)
-- Linha 100 atual (`_knockbackForce`) → `_equippedWeapon.knockbackForce`
-- `const BaseHitboxSize = 0.8f` substitui o magic number na fórmula de scale
-- `CycleWeapon()` agora tem lógica real: ciclo entre `_availableWeapons`, ignora se só 1 arma
-- `EquipWeapon()` adiciona arma na lista automaticamente, mesmo durante ataque — se `_isAttacking`, adiciona à lista mas não equipa agora. Pickup é sempre consumido, arma entra no ciclo de Q.
-- `Awake()` chama `_visualController.EquipVisual(_equippedWeapon.weaponType)` para sincronizar visual com arma default
-- `SwordHitbox` ganha `HashSet<Collider2D> _hitTargets` — cada ataque só acerta o mesmo alvo uma vez. `Initialize()` limpa o set.
-
 ---
 
-### Passo 4 — WeaponVisualController
-
-**Arquivo:** `Assets/Scripts/Combat/WeaponVisualController.cs`
-
-Componente simples que ativa/desativa child GameObjects conforme `WeaponType`. Cada child é um placeholder visual da arma — uma forma geométrica simples com cor distinta, não o sprite de idle do player.
-
-**Por que não usar sprite de idle puro:** sem diferenciação visual, fica impossível testar se a troca de arma está funcionando. Cada arma precisa de um child marker visível.
+## IBoss — Interface
 
 ```csharp
+// Assets/Scripts/Bosses/IBoss.cs
 using UnityEngine;
 
-public class WeaponVisualController : MonoBehaviour
+public interface IBoss
 {
-    [Header("Visual References")]
-    [SerializeField] private GameObject _visualSword;
-    [SerializeField] private GameObject _visualSpear;
-    [SerializeField] private GameObject _visualAxe;
-    [SerializeField] private GameObject _visualDagger;
-
-    private GameObject _currentVisual;
-
-    public void EquipVisual(WeaponType type)
-    {
-        switch (type)
-        {
-            case WeaponType.Sword:
-                SetActiveVisual(_visualSword);
-                break;
-            case WeaponType.Spear:
-                SetActiveVisual(_visualSpear);
-                break;
-            case WeaponType.Axe:
-                SetActiveVisual(_visualAxe);
-                break;
-            case WeaponType.Dagger:
-                SetActiveVisual(_visualDagger);
-                break;
-        }
-    }
-
-    private void SetActiveVisual(GameObject visual)
-    {
-        if (_visualSword != null) _visualSword.SetActive(false);
-        if (_visualSpear != null) _visualSpear.SetActive(false);
-        if (_visualAxe != null) _visualAxe.SetActive(false);
-        if (_visualDagger != null) _visualDagger.SetActive(false);
-
-        if (visual != null)
-        {
-            visual.SetActive(true);
-        }
-
-        _currentVisual = visual;
-    }
+    void Initialize(Transform player);
 }
 ```
 
-**Nenhuma dependência externa.** Recebe referências no Inspector.
-
 ---
 
-### Passo 5 — WeaponPickup
+## EnemyController — Refatorado
 
-**Arquivo:** `Assets/Scripts/Combat/WeaponPickup.cs`
-
-Segue o padrão de `RunePickup` — trigger collision, detecta layer Player, chama `EquipWeapon` no `WeaponController`.
+Padronizado: **todos** os layer checks usam `[SerializeField] LayerMask _playerLayer` em vez de `NameToLayer`.
 
 ```csharp
+// Assets/Scripts/Enemies/EnemyController.cs
 using UnityEngine;
 
-public class WeaponPickup : MonoBehaviour
+public class EnemyController : EnemyBase
 {
-    [Header("Pickup Settings")]
-    [SerializeField] private WeaponDataSO _weaponData;
+    [Header("Movement Settings")]
+    [SerializeField] private float _moveSpeed = 2f;
 
-    public WeaponDataSO WeaponData => _weaponData;
+    [Header("Jump Settings")]
+    [SerializeField] private float _jumpForce = 8f;
+    [SerializeField] private Transform _groundCheck;
+    [SerializeField] private float _groundCheckRadius = 0.15f;
+    [SerializeField] private LayerMask _groundLayer;
 
-    public void Initialize(WeaponDataSO data)
+    [Header("Enemy Type")]
+    [SerializeField] private EnemyType _enemyType = EnemyType.Melee;
+
+    [Header("Ranged Settings")]
+    [SerializeField] private float _preferredDistance = 5f;
+    [SerializeField] private float _shootCooldown = 1.5f;
+    [SerializeField] private GameObject _projectilePrefab;
+
+    [Header("Heavy Settings")]
+    [SerializeField] private float _chargeSpeed = 8f;
+    [SerializeField] private float _chargeCooldown = 3f;
+
+    [Header("References")]
+    [SerializeField] private Transform _player;
+    [SerializeField] private LayerMask _playerLayer;
+
+    private bool _isGrounded;
+    private float _shootTimer;
+    private float _chargeTimer;
+    private bool _isCharging;
+    private float _noHitTimer;
+
+    protected override void Awake()
     {
-        _weaponData = data;
+        base.Awake();
+
+        if (_groundCheck == null)
+        {
+            GameObject go = new GameObject("GroundCheck");
+            go.transform.SetParent(transform);
+            go.transform.localPosition = new Vector3(0f, -0.5f, 0f);
+            _groundCheck = go.transform;
+        }
+
+        if (_isElite)
+        {
+            if (_spriteRenderer != null) _spriteRenderer.color = Color.yellow;
+            transform.localScale *= 1.3f;
+
+            switch (_enemyType)
+            {
+                case EnemyType.Ranged:
+                    _shootCooldown *= 0.6f;
+                    break;
+                case EnemyType.Heavy:
+                    _knockbackForce *= 1.5f;
+                    break;
+                case EnemyType.Fast:
+                    _moveSpeed *= 1.3f;
+                    break;
+            }
+        }
+    }
+
+    public void Initialize(Transform player)
+    {
+        _player = player;
+    }
+
+    private void Update()
+    {
+        if (_isDead) return;
+
+        if (_attackCooldownTimer > 0) _attackCooldownTimer -= Time.deltaTime;
+        if (_shootTimer > 0) _shootTimer -= Time.deltaTime;
+        if (_chargeTimer > 0) _chargeTimer -= Time.deltaTime;
+
+        _isGrounded = Physics2D.OverlapCircle(
+            _groundCheck.position, _groundCheckRadius, _groundLayer);
+
+        switch (_enemyType)
+        {
+            case EnemyType.Melee:
+                ChasePlayer();
+                break;
+            case EnemyType.Fast:
+                ChasePlayerAggressive();
+                break;
+            case EnemyType.Heavy:
+                HeavyBehavior();
+                break;
+            case EnemyType.Ranged:
+                RangedBehavior();
+                break;
+        }
+    }
+
+    private void ChasePlayer()
+    {
+        if (_player == null) return;
+
+        float directionX = Mathf.Sign(_player.position.x - transform.position.x);
+        _rigidbody.linearVelocity = new Vector2(
+            directionX * _moveSpeed, _rigidbody.linearVelocity.y);
+
+        if (_player.position.y > transform.position.y + 1f && _isGrounded)
+        {
+            _rigidbody.linearVelocity = new Vector2(
+                _rigidbody.linearVelocity.x, _jumpForce);
+        }
+    }
+
+    private void ChasePlayerAggressive()
+    {
+        if (_player == null) return;
+
+        float directionX = Mathf.Sign(_player.position.x - transform.position.x);
+        _rigidbody.linearVelocity = new Vector2(
+            directionX * _moveSpeed, _rigidbody.linearVelocity.y);
+    }
+
+    private void HeavyBehavior()
+    {
+        if (_player == null) return;
+
+        if (_isCharging) return;
+
+        float dist = Vector2.Distance(transform.position, _player.position);
+
+        if (dist < 3f && _chargeTimer <= 0)
+        {
+            StartCoroutine(ChargeRoutine());
+            return;
+        }
+
+        float directionX = Mathf.Sign(_player.position.x - transform.position.x);
+        _rigidbody.linearVelocity = new Vector2(
+            directionX * _moveSpeed, _rigidbody.linearVelocity.y);
+    }
+
+    private System.Collections.IEnumerator ChargeRoutine()
+    {
+        _isCharging = true;
+        _chargeTimer = _chargeCooldown;
+
+        float dir = Mathf.Sign(_player.position.x - transform.position.x);
+        float elapsed = 0f;
+        float duration = 0.3f;
+
+        while (elapsed < duration)
+        {
+            _rigidbody.linearVelocity = new Vector2(
+                dir * _chargeSpeed, _rigidbody.linearVelocity.y);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        _isCharging = false;
+    }
+
+    private void RangedBehavior()
+    {
+        if (_player == null) return;
+
+        float dist = Vector2.Distance(transform.position, _player.position);
+
+        if (dist > _preferredDistance + 1f)
+        {
+            float dir = Mathf.Sign(_player.position.x - transform.position.x);
+            _rigidbody.linearVelocity = new Vector2(
+                dir * _moveSpeed, _rigidbody.linearVelocity.y);
+        }
+        else if (dist < _preferredDistance - 1f)
+        {
+            float dir = -Mathf.Sign(_player.position.x - transform.position.x);
+            _rigidbody.linearVelocity = new Vector2(
+                dir * _moveSpeed * 1.5f, _rigidbody.linearVelocity.y);
+        }
+        else
+        {
+            _rigidbody.linearVelocity = new Vector2(
+                0f, _rigidbody.linearVelocity.y);
+
+            if (_shootTimer <= 0)
+            {
+                ShootProjectile();
+                _shootTimer = _shootCooldown;
+            }
+        }
+
+        _noHitTimer += Time.deltaTime;
+        if (_noHitTimer > 5f)
+        {
+            float dir = Mathf.Sign(_player.position.x - transform.position.x);
+            _rigidbody.linearVelocity = new Vector2(
+                dir * _moveSpeed, _rigidbody.linearVelocity.y);
+        }
+    }
+
+    private void ShootProjectile()
+    {
+        if (_projectilePrefab == null || _player == null) return;
+
+        Vector2 dir = (_player.position - transform.position).normalized;
+        GameObject proj = Instantiate(
+            _projectilePrefab, transform.position, Quaternion.identity);
+
+        EnemyProjectile ep = proj.GetComponent<EnemyProjectile>();
+        if (ep != null)
+        {
+            ep.Initialize(dir, _damageToPlayer, this);
+        }
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (_weaponData == null)
+        if (_isDead) return;
+        if (((1 << other.gameObject.layer) & _playerLayer) == 0) return;
+        if (_attackCooldownTimer > 0) return;
+
+        ApplyContactDamage(other);
+    }
+
+    public void OnProjectileHit()
+    {
+        _noHitTimer = 0f;
+    }
+}
+```
+
+---
+
+## EnemyProjectile — Corrigido
+
+Correções aplicadas:
+- Ignora colisão com layer Enemy
+- Reseta `_noHitTimer` do inimigo ranged quando acerta o player
+- Referência ao owner passada via `Initialize`
+- Layer check padronizado com `LayerMask`
+
+```csharp
+// Assets/Scripts/Enemies/EnemyProjectile.cs
+using UnityEngine;
+
+public class EnemyProjectile : MonoBehaviour
+{
+    [SerializeField] private float _speed = 6f;
+    [SerializeField] private int _damage = 8;
+    [SerializeField] private float _lifetime = 3f;
+    [SerializeField] private LayerMask _enemyLayer;
+
+    private Rigidbody2D _rb;
+    private bool _initialized;
+    private EnemyController _owner;
+
+    private void Awake()
+    {
+        _rb = GetComponent<Rigidbody2D>();
+        if (_rb != null) _rb.gravityScale = 0f;
+    }
+
+    public void Initialize(Vector2 direction, int damage, EnemyController owner = null)
+    {
+        _damage = damage;
+        _owner = owner;
+        _initialized = true;
+
+        if (_rb != null)
         {
-            Debug.LogError("WeaponPickup: _weaponData não atribuído no Inspector!", this);
-            return;
+            _rb.linearVelocity = direction.normalized * _speed;
         }
 
-        if (other.gameObject.layer != LayerMask.NameToLayer("Player")) return;
+        Destroy(gameObject, _lifetime);
+    }
 
-        WeaponController wc = other.GetComponentInParent<WeaponController>();
-        if (wc == null) return;
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (!_initialized) return;
 
-        wc.EquipWeapon(_weaponData);
+        // Ignorar inimigos
+        if (((1 << other.gameObject.layer) & _enemyLayer) != 0) return;
+
+        IDamageable damageable = other.GetComponent<IDamageable>();
+        if (damageable != null)
+        {
+            damageable.TakeDamage(_damage);
+
+            // Reset no-hit timer do ranged owner
+            if (_owner != null)
+            {
+                _owner.OnProjectileHit();
+            }
+        }
+
         Destroy(gameObject);
     }
 }
@@ -493,458 +509,881 @@ public class WeaponPickup : MonoBehaviour
 
 ---
 
-### Passo 6 — ScriptableObject Assets
+## DangerZone — Com Limite de Instâncias
 
-Criar 4 assets via `Assets → Create → Combat → Weapon Data`:
+```csharp
+// Assets/Scripts/Bosses/DangerZone.cs
+using UnityEngine;
 
-**`Assets/Data/Weapons/WeaponSword.asset`:**
-| Campo | Valor |
-|-------|-------|
-| weaponType | Sword |
-| weaponName | "Sword" |
-| damage | 10 |
-| attackCooldown | 0.3 |
-| attackDuration | 0.1 |
-| attackRange | 0.8 |
-| knockbackForce | 2.0 |
-| attackPattern | HorizontalSwing |
-| placeholderColor | R=0.85 G=0.85 B=0.9 A=1 (cinza claro) |
+public class DangerZone : MonoBehaviour
+{
+    [SerializeField] private int _damagePerTick = 5;
+    [SerializeField] private float _tickInterval = 0.5f;
+    [SerializeField] private float _duration = 4f;
 
-**`Assets/Data/Weapons/WeaponSpear.asset`:**
-| Campo | Valor |
-|-------|-------|
-| weaponType | Spear |
-| weaponName | "Spear" |
-| damage | 8 |
-| attackCooldown | 0.4 |
-| attackDuration | 0.12 |
-| attackRange | 1.3 |
-| knockbackForce | 1.5 |
-| attackPattern | ForwardThrust |
-| placeholderColor | R=0.3 G=0.5 B=0.9 A=1 (azul) |
+    private float _tickTimer;
+    private SpriteRenderer _sr;
 
-**`Assets/Data/Weapons/WeaponAxe.asset`:**
-| Campo | Valor |
-|-------|-------|
-| weaponType | Axe |
-| weaponName | "Axe" |
-| damage | 18 |
-| attackCooldown | 0.6 |
-| attackDuration | 0.15 |
-| attackRange | 0.7 |
-| knockbackForce | 4.0 |
-| attackPattern | OverheadSmash |
-| placeholderColor | R=0.9 G=0.3 B=0.3 A=1 (vermelho) |
+    private void Awake()
+    {
+        _sr = GetComponent<SpriteRenderer>();
+        if (_sr != null) _sr.color = new Color(1f, 0f, 0f, 0.4f);
+    }
 
-**`Assets/Data/Weapons/WeaponDagger.asset`:**
-| Campo | Valor |
-|-------|-------|
-| weaponType | Dagger |
-| weaponName | "Dagger" |
-| damage | 5 |
-| attackCooldown | 0.15 |
-| attackDuration | 0.06 |
-| attackRange | 0.5 |
-| knockbackForce | 1.0 |
-| attackPattern | QuickStab |
-| placeholderColor | R=0.3 G=0.8 B=0.3 A=1 (verde) |
+    public void Initialize(float duration)
+    {
+        _duration = duration;
+        Destroy(gameObject, _duration);
+    }
 
-**Cores atualizadas** conforme Nota 3: sword=cinza, spear=azul, axe=vermelho, dagger=verde. Cada visual placeholder será uma child com SpriteRenderer usando essa cor.
+    private void OnTriggerStay2D(Collider2D other)
+    {
+        _tickTimer -= Time.deltaTime;
+        if (_tickTimer > 0) return;
+
+        // Layer check padronizado
+        int playerLayer = LayerMask.NameToLayer("Player");
+        if (other.gameObject.layer == playerLayer)
+        {
+            IDamageable d = other.GetComponent<IDamageable>();
+            if (d != null) d.TakeDamage(_damagePerTick);
+            _tickTimer = _tickInterval;
+        }
+    }
+}
+```
+
+---
+
+## Boss Scripts
+
+### BossMeleeController
+
+Flag `_isActive` impede coroutine duplicada.
+
+```csharp
+// Assets/Scripts/Bosses/BossMeleeController.cs
+using UnityEngine;
+
+public class BossMeleeController : EnemyBase, IBoss
+{
+    [Header("Boss Movement")]
+    [SerializeField] private float _moveSpeed = 3f;
+
+    [Header("Attack Pattern")]
+    [SerializeField] private int _attackComboCount = 3;
+    [SerializeField] private float _attackInterval = 0.4f;
+    [SerializeField] private float _comboCooldown = 1.5f;
+    [SerializeField] private float _attackRange = 1.5f;
+
+    [Header("Jump")]
+    [SerializeField] private float _jumpForce = 8f;
+    [SerializeField] private Transform _groundCheck;
+    [SerializeField] private float _groundCheckRadius = 0.15f;
+    [SerializeField] private LayerMask _groundLayer;
+
+    [Header("References")]
+    [SerializeField] private LayerMask _playerLayer;
+
+    private Transform _player;
+    private bool _isGrounded;
+    private bool _isEnraged;
+    private bool _isActive;
+
+    public void Initialize(Transform player)
+    {
+        if (_isActive) return; // Prevenir double init
+        _player = player;
+        _isActive = true;
+        StartCoroutine(BossBehaviorRoutine());
+    }
+
+    protected override void Awake()
+    {
+        base.Awake();
+        if (_groundCheck == null)
+        {
+            GameObject go = new GameObject("GroundCheck");
+            go.transform.SetParent(transform);
+            go.transform.localPosition = new Vector3(0f, -0.8f, 0f);
+            _groundCheck = go.transform;
+        }
+        if (_isElite)
+        {
+            if (_spriteRenderer != null) _spriteRenderer.color = Color.yellow;
+            transform.localScale *= 1.3f;
+        }
+    }
+
+    private void Update()
+    {
+        if (_isDead) return;
+        if (_attackCooldownTimer > 0) _attackCooldownTimer -= Time.deltaTime;
+
+        _isGrounded = Physics2D.OverlapCircle(
+            _groundCheck.position, _groundCheckRadius, _groundLayer);
+
+        if (!_isEnraged && _currentHealth <= _maxHealth * 0.3f)
+        {
+            _isEnraged = true;
+            _moveSpeed *= 1.5f;
+            _comboCooldown *= 0.5f;
+            if (_spriteRenderer != null) _spriteRenderer.color = Color.red;
+        }
+    }
+
+    private System.Collections.IEnumerator BossBehaviorRoutine()
+    {
+        while (!_isDead)
+        {
+            if (_player == null) { yield return null; continue; }
+
+            while (!_isDead && Vector2.Distance(
+                transform.position, _player.position) > _attackRange)
+            {
+                if (_player == null) break;
+                float dir = Mathf.Sign(_player.position.x - transform.position.x);
+                _rigidbody.linearVelocity = new Vector2(
+                    dir * _moveSpeed, _rigidbody.linearVelocity.y);
+                if (_player.position.y > transform.position.y + 1f && _isGrounded)
+                {
+                    _rigidbody.linearVelocity = new Vector2(
+                        _rigidbody.linearVelocity.x, _jumpForce);
+                }
+                yield return null;
+            }
+
+            _rigidbody.linearVelocity = new Vector2(0f, _rigidbody.linearVelocity.y);
+
+            for (int i = 0; i < _attackComboCount && !_isDead; i++)
+            {
+                AttackHit();
+                yield return new WaitForSeconds(_attackInterval);
+            }
+
+            yield return new WaitForSeconds(_comboCooldown);
+        }
+    }
+
+    private void AttackHit()
+    {
+        Collider2D hit = Physics2D.OverlapCircle(
+            transform.position, _attackRange, _playerLayer);
+        if (hit != null) ApplyContactDamage(hit);
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (_isDead) return;
+        if (((1 << other.gameObject.layer) & _playerLayer) == 0) return;
+        ApplyContactDamage(other);
+    }
+}
+```
+
+### BossAreaController
+
+Limite de danger zones via `_maxDangerZones`.
+
+```csharp
+// Assets/Scripts/Bosses/BossAreaController.cs
+using System.Collections.Generic;
+using UnityEngine;
+
+public class BossAreaController : EnemyBase, IBoss
+{
+    [Header("Boss Movement")]
+    [SerializeField] private float _moveSpeed = 1.5f;
+
+    [Header("Danger Zones")]
+    [SerializeField] private GameObject _dangerZonePrefab;
+    [SerializeField] private float _attackInterval = 2f;
+    [SerializeField] private float _dangerZoneDuration = 4f;
+    [SerializeField] private float _dangerZoneRadius = 3f;
+    [SerializeField] private int _maxDangerZones = 5;
+
+    [Header("Projectiles")]
+    [SerializeField] private GameObject _projectilePrefab;
+    [SerializeField] private float _fallingProjectileInterval = 3f;
+
+    [Header("References")]
+    [SerializeField] private LayerMask _playerLayer;
+
+    private Transform _player;
+    private bool _isPhaseTwo;
+    private bool _isActive;
+    private readonly List<GameObject> _activeDangerZones = new List<GameObject>();
+
+    public void Initialize(Transform player)
+    {
+        if (_isActive) return;
+        _player = player;
+        _isActive = true;
+        StartCoroutine(BossBehaviorRoutine());
+        StartCoroutine(FallingProjectileRoutine());
+    }
+
+    protected override void Awake()
+    {
+        base.Awake();
+        if (_isElite)
+        {
+            if (_spriteRenderer != null) _spriteRenderer.color = Color.yellow;
+            transform.localScale *= 1.3f;
+        }
+    }
+
+    private void Update()
+    {
+        if (_isDead) return;
+
+        // Limpar referências destruídas
+        _activeDangerZones.RemoveAll(z => z == null);
+
+        if (!_isPhaseTwo && _currentHealth <= _maxHealth * 0.5f)
+        {
+            _isPhaseTwo = true;
+            if (_spriteRenderer != null) _spriteRenderer.color = Color.magenta;
+        }
+    }
+
+    private System.Collections.IEnumerator BossBehaviorRoutine()
+    {
+        while (!_isDead)
+        {
+            if (_player != null)
+            {
+                float dist = Vector2.Distance(
+                    transform.position, _player.position);
+                if (dist > 3f)
+                {
+                    float dir = Mathf.Sign(
+                        _player.position.x - transform.position.x);
+                    _rigidbody.linearVelocity = new Vector2(
+                        dir * _moveSpeed, _rigidbody.linearVelocity.y);
+                }
+                else
+                {
+                    _rigidbody.linearVelocity = new Vector2(
+                        0f, _rigidbody.linearVelocity.y);
+                }
+            }
+
+            yield return new WaitForSeconds(_attackInterval);
+
+            if (_isDead || _player == null) continue;
+
+            SpawnDangerZone(_player.position);
+
+            if (_isPhaseTwo)
+            {
+                Vector2 offset = new Vector2(
+                    Random.Range(-_dangerZoneRadius, _dangerZoneRadius), 0f);
+                SpawnDangerZone((Vector2)_player.position + offset);
+            }
+        }
+    }
+
+    private System.Collections.IEnumerator FallingProjectileRoutine()
+    {
+        while (!_isDead)
+        {
+            yield return new WaitForSeconds(_fallingProjectileInterval);
+
+            if (_isDead || _player == null || _projectilePrefab == null) continue;
+
+            Vector3 spawnPos = _player.position + new Vector3(0f, 8f, 0f);
+            Vector2 dir = (_player.position - spawnPos).normalized;
+
+            GameObject proj = Instantiate(
+                _projectilePrefab, spawnPos, Quaternion.identity);
+            EnemyProjectile ep = proj.GetComponent<EnemyProjectile>();
+            if (ep != null) ep.Initialize(dir, _damageToPlayer);
+        }
+    }
+
+    private void SpawnDangerZone(Vector2 position)
+    {
+        if (_dangerZonePrefab == null) return;
+        if (_activeDangerZones.Count >= _maxDangerZones) return;
+
+        GameObject dz = Instantiate(
+            _dangerZonePrefab, position, Quaternion.identity);
+        _activeDangerZones.Add(dz);
+
+        DangerZone dzScript = dz.GetComponent<DangerZone>();
+        if (dzScript != null) dzScript.Initialize(_dangerZoneDuration);
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (_isDead) return;
+        if (((1 << other.gameObject.layer) & _playerLayer) == 0) return;
+        ApplyContactDamage(other);
+    }
+}
+```
+
+### BossHybridController
+
+```csharp
+// Assets/Scripts/Bosses/BossHybridController.cs
+using UnityEngine;
+
+public class BossHybridController : EnemyBase, IBoss
+{
+    [Header("Boss Movement")]
+    [SerializeField] private float _moveSpeed = 2.5f;
+
+    [Header("Phase Settings")]
+    [SerializeField] private float _phaseTwoHPPercent = 0.5f;
+
+    [Header("Melee")]
+    [SerializeField] private float _meleeAttackCooldown = 0.8f;
+    [SerializeField] private float _meleeRange = 1.5f;
+
+    [Header("Ranged")]
+    [SerializeField] private GameObject _projectilePrefab;
+    [SerializeField] private float _shootCooldown = 1.2f;
+    [SerializeField] private float _preferredDistance = 6f;
+    [SerializeField] private float _spreadAngle = 15f;
+
+    [Header("Jump")]
+    [SerializeField] private float _jumpForce = 8f;
+    [SerializeField] private Transform _groundCheck;
+    [SerializeField] private float _groundCheckRadius = 0.15f;
+    [SerializeField] private LayerMask _groundLayer;
+
+    [Header("References")]
+    [SerializeField] private LayerMask _playerLayer;
+
+    private Transform _player;
+    private bool _isPhaseTwo;
+    private bool _isGrounded;
+    private float _shootTimer;
+    private float _meleeTimer;
+    private bool _isActive;
+
+    public void Initialize(Transform player)
+    {
+        if (_isActive) return;
+        _player = player;
+        _isActive = true;
+        StartCoroutine(BossBehaviorRoutine());
+    }
+
+    protected override void Awake()
+    {
+        base.Awake();
+        if (_groundCheck == null)
+        {
+            GameObject go = new GameObject("GroundCheck");
+            go.transform.SetParent(transform);
+            go.transform.localPosition = new Vector3(0f, -0.8f, 0f);
+            _groundCheck = go.transform;
+        }
+        if (_isElite)
+        {
+            if (_spriteRenderer != null) _spriteRenderer.color = Color.yellow;
+            transform.localScale *= 1.3f;
+        }
+    }
+
+    private void Update()
+    {
+        if (_isDead) return;
+        if (_attackCooldownTimer > 0) _attackCooldownTimer -= Time.deltaTime;
+        if (_shootTimer > 0) _shootTimer -= Time.deltaTime;
+        if (_meleeTimer > 0) _meleeTimer -= Time.deltaTime;
+
+        _isGrounded = Physics2D.OverlapCircle(
+            _groundCheck.position, _groundCheckRadius, _groundLayer);
+
+        if (!_isPhaseTwo && _currentHealth <= _maxHealth * _phaseTwoHPPercent)
+        {
+            _isPhaseTwo = true;
+            _moveSpeed *= 0.7f;
+            if (_spriteRenderer != null) _spriteRenderer.color = Color.red;
+        }
+    }
+
+    private System.Collections.IEnumerator BossBehaviorRoutine()
+    {
+        while (!_isDead)
+        {
+            if (_player == null) { yield return null; continue; }
+
+            if (!_isPhaseTwo)
+                yield return MeleePhase();
+            else
+                yield return RangedPhase();
+        }
+    }
+
+    private System.Collections.IEnumerator MeleePhase()
+    {
+        while (!_isDead && _player != null &&
+               Vector2.Distance(transform.position, _player.position) > _meleeRange)
+        {
+            float dir = Mathf.Sign(_player.position.x - transform.position.x);
+            _rigidbody.linearVelocity = new Vector2(
+                dir * _moveSpeed, _rigidbody.linearVelocity.y);
+            if (_player.position.y > transform.position.y + 1f && _isGrounded)
+            {
+                _rigidbody.linearVelocity = new Vector2(
+                    _rigidbody.linearVelocity.x, _jumpForce);
+            }
+            if (_isPhaseTwo) yield break;
+            yield return null;
+        }
+
+        _rigidbody.linearVelocity = new Vector2(0f, _rigidbody.linearVelocity.y);
+
+        if (_meleeTimer <= 0 && _player != null)
+        {
+            Collider2D hit = Physics2D.OverlapCircle(
+                transform.position, _meleeRange, _playerLayer);
+            if (hit != null) ApplyContactDamage(hit);
+            _meleeTimer = _meleeAttackCooldown;
+        }
+
+        yield return new WaitForSeconds(_meleeAttackCooldown);
+    }
+
+    private System.Collections.IEnumerator RangedPhase()
+    {
+        float elapsed = 0f;
+        float phaseDuration = 4f;
+
+        while (elapsed < phaseDuration && !_isDead)
+        {
+            if (_player == null) yield break;
+
+            float dist = Vector2.Distance(
+                transform.position, _player.position);
+
+            if (dist < _preferredDistance - 1f)
+            {
+                float dir = -Mathf.Sign(
+                    _player.position.x - transform.position.x);
+                _rigidbody.linearVelocity = new Vector2(
+                    dir * _moveSpeed, _rigidbody.linearVelocity.y);
+            }
+            else
+            {
+                _rigidbody.linearVelocity = new Vector2(
+                    0f, _rigidbody.linearVelocity.y);
+            }
+
+            if (_shootTimer <= 0)
+            {
+                ShootSpread();
+                _shootTimer = _shootCooldown;
+            }
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    private void ShootSpread()
+    {
+        if (_projectilePrefab == null || _player == null) return;
+
+        Vector2 baseDir = (_player.position - transform.position).normalized;
+        float baseAngle = Mathf.Atan2(baseDir.y, baseDir.x) * Mathf.Rad2Deg;
+
+        float[] angles = { 0f, _spreadAngle, -_spreadAngle };
+
+        for (int i = 0; i < angles.Length; i++)
+        {
+            float angle = (baseAngle + angles[i]) * Mathf.Deg2Rad;
+            Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+
+            GameObject proj = Instantiate(
+                _projectilePrefab, transform.position, Quaternion.identity);
+            EnemyProjectile ep = proj.GetComponent<EnemyProjectile>();
+            if (ep != null) ep.Initialize(dir, _damageToPlayer);
+        }
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (_isDead) return;
+        if (((1 << other.gameObject.layer) & _playerLayer) == 0) return;
+        ApplyContactDamage(other);
+    }
+}
+```
+
+---
+
+## BossFloorHandler — Refatorado
+
+```csharp
+// Assets/Scripts/Dungeon/BossFloorHandler.cs — método SpawnBoss():
+private void SpawnBoss()
+{
+    if (_bossPrefabs == null || _bossPrefabs.Length == 0) return;
+    if (_bossSpawnPoint == null || _player == null) return;
+
+    int floor = FloorManager.Instance != null ? FloorManager.Instance.CurrentFloor : 5;
+    int index = Mathf.Clamp((floor / 5) - 1, 0, _bossPrefabs.Length - 1);
+
+    GameObject boss = Instantiate(
+        _bossPrefabs[index], _bossSpawnPoint.position, Quaternion.identity);
+
+    // IBoss genérico — sem GetComponent repetido
+    IBoss bossInterface = boss.GetComponent<IBoss>();
+    if (bossInterface != null) bossInterface.Initialize(_player);
+
+    // ApplyDifficulty via EnemyBase (funciona para qualquer boss)
+    EnemyBase eb = boss.GetComponent<EnemyBase>();
+    if (eb != null)
+    {
+        FloorConfigSO config = FloorManager.Instance?.FloorConfig;
+        if (config != null)
+        {
+            float hpMult = DifficultyScaler.GetHPMultiplier(
+                floor, config.HpScalingPerFloor) * 3f;
+            float dmgMult = DifficultyScaler.GetDamageMultiplier(
+                floor, config.DmgScalingPerFloor) * 2f;
+            float runeMult = DifficultyScaler.GetRuneMultiplier(
+                floor, config.HpScalingPerFloor) * 5f;
+            eb.ApplyDifficulty(hpMult, dmgMult, runeMult);
+        }
+    }
+
+    EnemyDeathTracker tracker = boss.AddComponent<EnemyDeathTracker>();
+    tracker.Initialize(_roomController != null
+        ? _roomController : GetComponent<RoomController>());
+
+    if (_roomController != null)
+        _roomController.IncrementEnemiesAlive();
+}
+```
+
+---
+
+## RoomController — Múltiplos Prefabs
+
+```csharp
+// Assets/Scripts/Rooms/RoomController.cs — adicionar e modificar:
+
+[SerializeField] private GameObject[] _enemyPrefabs;
+
+public void SetEnemyPrefabs(GameObject[] prefabs)
+{
+    _enemyPrefabs = prefabs;
+}
+
+private void SpawnCombatEnemies()
+{
+    GameObject prefabToSpawn = _enemyPrefab; // fallback
+
+    if (_enemyPrefabs != null && _enemyPrefabs.Length > 0)
+    {
+        prefabToSpawn = _enemyPrefabs[Random.Range(0, _enemyPrefabs.Length)];
+    }
+
+    if (prefabToSpawn == null || _spawnPoints == null) return;
+
+    foreach (Transform point in _spawnPoints)
+    {
+        GameObject enemy = Instantiate(
+            prefabToSpawn, point.position, Quaternion.identity);
+
+        var controller = enemy.GetComponent<EnemyController>();
+        if (controller != null)
+        {
+            controller.Initialize(_player);
+
+            if (FloorManager.Instance != null
+                && FloorManager.Instance.FloorConfig != null)
+            {
+                int floor = FloorManager.Instance.CurrentFloor;
+                var config = FloorManager.Instance.FloorConfig;
+                float hpMult = DifficultyScaler.GetHPMultiplier(
+                    floor, config.HpScalingPerFloor);
+                float dmgMult = DifficultyScaler.GetDamageMultiplier(
+                    floor, config.DmgScalingPerFloor);
+                float runeMult = DifficultyScaler.GetRuneMultiplier(
+                    floor, config.HpScalingPerFloor);
+                controller.ApplyDifficulty(hpMult, dmgMult, runeMult);
+            }
+        }
+
+        var tracker = enemy.AddComponent<EnemyDeathTracker>();
+        tracker.Initialize(this);
+
+        _enemiesAlive++;
+    }
+}
+```
+
+---
+
+## DungeonGenerator — Distribuição por Floor
+
+```csharp
+// Assets/Scripts/Dungeon/DungeonGenerator.cs — adicionar:
+
+[SerializeField] private GameObject _enemyFastPrefab;
+[SerializeField] private GameObject _enemyHeavyPrefab;
+[SerializeField] private GameObject _enemyRangedPrefab;
+
+private GameObject[] GetEnemyPrefabsForFloor(int floor)
+{
+    List<GameObject> pool = new List<GameObject>();
+
+    // Melee sempre presente — garante balanceamento
+    if (_enemyPrefab != null) pool.Add(_enemyPrefab);
+
+    if (floor >= 3 && _enemyFastPrefab != null) pool.Add(_enemyFastPrefab);
+    if (floor >= 5 && _enemyHeavyPrefab != null) pool.Add(_enemyHeavyPrefab);
+    if (floor >= 7 && _enemyRangedPrefab != null) pool.Add(_enemyRangedPrefab);
+
+    return pool.ToArray();
+}
+
+// Em GenerateFloor(), substituir rc.SetEnemyPrefab(...) por:
+//   rc.SetEnemyPrefabs(GetEnemyPrefabsForFloor(floorNumber));
+```
+
+| Floor | Inimigos possíveis |
+|-------|-------------------|
+| 1–2 | Melee |
+| 3–4 | Melee, Fast |
+| 5–6 | Melee, Fast, Heavy |
+| 7+ | Melee, Fast, Heavy, Ranged |
 
 ---
 
 ## Setup na Unity
 
-### 1. Criar estrutura de pastas de assets
+### S1 — Layer EnemyProjectile
 
-```
-Assets/Data/Weapons/        ← criar se não existe
-Assets/Prefabs/              ← já existe
-Assets/Scenes/               ← já existe
-```
+1. **Project Settings → Tags and Layers**
+2. Nova layer índice 12: **`EnemyProjectile`**
 
-### 2. Criar ScriptableObject assets
+### S2 — Collision Matrix
 
-1. `Assets → Create → Combat → Weapon Data` → renomear "WeaponSword"
-2. Configurar campos conforme tabela do Passo 6
-3. Repetir para Spear, Axe, Dagger
-4. Mover todos para `Assets/Data/Weapons/`
+| | Player | Enemy | EnemyProjectile | Ground | Default |
+|-|--------|-------|-----------------|--------|---------|
+| EnemyProjectile | SIM | NÃO | NÃO | SIM | NÃO |
 
-### 3. Atualizar prefab do Player
+### S3 — Prefab EnemyProjectile
 
-Abrir `Assets/Prefabs/Player.prefab` no prefab editor.
+| Componente | Configuração |
+|-----------|-------------|
+| SpriteRenderer | Placeholder. Color: vermelho. Order +2 |
+| Rigidbody2D | Gravity 0, Freeze Rotation Z ✓ |
+| CircleCollider2D | Is Trigger true, Radius 0.15 |
+| EnemyProjectile.cs | _speed=6, _damage=8, _lifetime=3 |
+| Layer | EnemyProjectile |
 
-**Convenção:** `WeaponController` vive no root do Player prefab. `WeaponPickup` usa `GetComponentInParent<WeaponController>()` para encontrá-lo a partir de qualquer collider child.
+### S4 — Prefab DangerZone
 
-**Adicionar child GameObjects para visuais (placeholder):**
+| Componente | Configuração |
+|-----------|-------------|
+| SpriteRenderer | Placeholder. Color: vermelho transparente (A:0.4). Scale 2×2 |
+| BoxCollider2D | Is Trigger true, Size (2, 2) |
+| DangerZone.cs | _damagePerTick=5, _tickInterval=0.5 |
+| Layer | Default |
 
-Cada visual é um Empty GameObject filho do Player com um SpriteRenderer. Usar QUALQUER sprite (um quadrado, ou o sprite de idle do player — não importa), apenas com a cor correta. O importante é que cada um seja visível e distinto.
+### S5 — Prefab EnemyFast
 
-```
-Player (prefab root)
-├── ... (componentes existentes)
-├── Visual_Sword (Empty)
-│   └── SpriteRenderer (qualquer sprite, color = R0.85 G0.85 B0.9)
-├── Visual_Spear (Empty)
-│   └── SpriteRenderer (qualquer sprite, color = R0.3 G0.5 B0.9)
-├── Visual_Axe (Empty)
-│   └── SpriteRenderer (qualquer sprite, color = R0.9 G0.3 B0.3)
-├── Visual_Dagger (Empty)
-│   └── SpriteRenderer (qualquer sprite, color = R0.3 G0.8 B0.3)
-└── GroundCheck (existente)
-```
+Duplicar `Enemy.prefab`. Configurar EnemyController:
 
-Para cada visual:
-1. Criar Empty como filho do Player
-2. Renomear para `Visual_Sword` (etc.)
-3. Adicionar SpriteRenderer — usar qualquer sprite como placeholder
-4. No SpriteRenderer: Color conforme a cor do SO correspondente
-5. Posicionar com `localPosition` consistente (ex: offset na mão/lado do personagem, todos na mesma posição)
-6. Definir `Sorting Layer` e `Order in Layer` compatíveis — todos com mesmo sorting, acima do sprite do player, para não sumirem atrás dele
-7. Desativar todos EXCETO Visual_Sword (default)
+| Campo | Valor |
+|-------|-------|
+| _enemyType | Fast |
+| _moveSpeed | 5 |
+| _maxHealth | 15 |
+| _damageToPlayer | 8 |
+| _attackCooldown | 0.6 |
+| _knockbackForce | 3 |
 
-**Adicionar componente WeaponVisualController ao Player:**
-1. No Player, Add Component → `WeaponVisualController`
-2. Arrastar:
-   - `_visualSword` → Visual_Sword
-   - `_visualSpear` → Visual_Spear
-   - `_visualAxe` → Visual_Axe
-   - `_visualDagger` → Visual_Dagger
+SpriteRenderer Color: ciano. Scale: 0.8.
 
-**Atualizar componente WeaponController no Player:**
-1. Selecionar o componente WeaponController existente
-2. Os campos antigos (`_damage`, `_attackCooldown`, etc.) foram removidos — o script novo não os tem mais
-3. Configurar campos novos:
-   - `_defaultWeapon` → arrastar `WeaponSword.asset` de `Assets/Data/Weapons/`
-   - `_hitboxPrefab` → arrastar `SwordHitbox.prefab` (já existente)
-   - `_player` → arrastar o próprio Player (this.transform)
-   - `_visualController` → arrastar o componente `WeaponVisualController` do mesmo Player
+### S6 — Prefab EnemyHeavy
 
-**Ajustar SwordHitbox prefab:**
-1. Abrir `Assets/Prefabs/SwordHitbox.prefab`
-2. No BoxCollider2D: ajustar Size para `X = 0.8, Y = 0.8` (base oficial para o cálculo `attackRange / BaseHitboxSize`)
-3. Salvar prefab
+Duplicar `Enemy.prefab`:
 
-### 4. Criar WeaponPickup prefab
+| Campo | Valor |
+|-------|-------|
+| _enemyType | Heavy |
+| _moveSpeed | 1 |
+| _maxHealth | 90 |
+| _damageToPlayer | 20 |
+| _attackCooldown | 1.5 |
+| _knockbackForce | 10 |
+| _chargeSpeed | 8 |
+| _chargeCooldown | 3 |
 
-1. `Assets/Prefabs/` → Create Empty → renomear "WeaponPickup"
-2. Adicionar componentes:
-   - SpriteRenderer → sprite de item placeholder (ex: gem do SunnyLand)
-   - CircleCollider2D → `Is Trigger = true`, Radius: 0.3
-   - WeaponPickup.cs → `_weaponData`: deixar vazio (cada instância no scene define qual arma)
-3. Arrastar para `Assets/Prefabs/` para criar prefab
-4. Deletar da cena
+Color: laranja. Scale: 1.5.
 
-### 5. Criar cena de teste (WeaponTestScene)
+### S7 — Prefab EnemyRanged
 
-Criar uma cena dedicada para testar o sistema de armas isoladamente.
+Duplicar `Enemy.prefab`:
 
-1. `File → New Scene → Basic (Built-in)`
-2. `File → Save As → Assets/Scenes/WeaponTestScene.unity`
-3. Não precisa adicionar ao Build Settings (é só para dev)
+| Campo | Valor |
+|-------|-------|
+| _enemyType | Ranged |
+| _moveSpeed | 1.5 |
+| _maxHealth | 20 |
+| _damageToPlayer | 5 |
+| _attackCooldown | 2 |
+| _knockbackForce | 2 |
+| _preferredDistance | 5 |
+| _shootCooldown | 1.5 |
+| _projectilePrefab | EnemyProjectile.prefab |
 
-**Dependências explícitas:**
-- NÃO carregar `FloorManager`, `DungeonGenerator` ou outros managers de dungeon — esta cena é isolada
-- `RunUpgradeManager` é opcional na cena de teste. Se não presente, dano usa valor base do SO sem multiplicador. Se presente, usar versão mínima com `DontDestroyOnLoad` desabilitado.
+Color: roxo. Scale: 0.9.
 
-**Hierarquia da cena:**
-```
-WeaponTestScene
-├── Main Camera
-│   └── CameraFollow.cs (_target = Player)
-├── Player (Player.prefab)
-├── Chão (SpriteRenderer grande, Layer = Ground)
-├── Pickup_Spear (WeaponPickup + WeaponDataSO = WeaponSpear)
-├── Pickup_Axe (WeaponPickup + WeaponDataSO = WeaponAxe)
-├── Pickup_Dagger (WeaponPickup + WeaponDataSO = WeaponDagger)
-└── DummyEnemy (Enemy.prefab para testar dano)
-```
+### S8 — Atualizar Enemy.prefab
 
-**Passo a passo para montar:**
-1. Arrastar `Player.prefab` para a cena
-2. Criar Empty "Chão" → adicionar SpriteRenderer com sprite grande + BoxCollider2D, Layer = Ground
-3. Posicionar Chão abaixo do player
-4. Criar 3 instâncias de `WeaponPickup.prefab` (arrastar da pasta Prefabs)
-5. Em cada instância, configurar `_weaponData`:
-   - Pickup_Spear → WeaponSpear.asset
-   - Pickup_Axe → WeaponAxe.asset
-   - Pickup_Dagger → WeaponDagger.asset
-6. Posicionar pickups espalhados perto do player
-7. (Opcional) Arrastar `Enemy.prefab` como dummy para testar dano
+`_enemyType` = Melee. Campos novos com defaults. `_projectilePrefab` = vazio.
 
-### 6. Testar
+### S9 — Atualizar EliteEnemy.prefab
 
-**Teste 1 — Arma default (Sword):**
-1. Abrir `WeaponTestScene`
-2. Play Mode
-3. Atacar (mouse esquerdo / Enter) → hitbox aparece na direção que o player olha
-4. Hitbox Size = 0.8 (scale = 1.0, pois attackRange/BaseHitboxSize = 0.8/0.8 = 1.0)
-5. Visual_Sword (cinza) está visível
+`_enemyType` = Melee. `_isElite` = true.
 
-**Teste 2 — Troca de arma via pickup:**
-1. Andar sobre Pickup_Axe → visual muda para vermelho (axe)
-2. Atacar → hitbox mais lenta, mais knockback, offset diferente (OverheadSmash)
-3. Andar sobre Pickup_Spear → visual muda para azul
-4. Atacar → hitbox maior (attackRange=1.3, scale=1.625), mais à frente (ForwardThrust)
+### S10 — Prefabs Boss
 
-**Teste 3 — Swap com Q:**
-1. Começar com Sword equipada (default)
-2. Pressionar Q → arma muda para a próxima na lista (primeiro pickup coletado)
-3. Pressionar Q novamente → ciclo continua
-4. Se só 1 arma na lista → Q não faz nada
+**Boss1:** Sprite vermelho, Scale 2.5, BossMeleeController, GroundCheck, Layer Enemy, CircleCollider2D trigger+physics.
 
-**Teste 4 — Bloqueio de troca durante ataque:**
-1. Atacar → durante a animação, coletar pickup
-2. Pickup é destruído, arma é adicionada à lista `_availableWeapons`, mas NÃO é equipada (_isAttacking bloqueia o equip)
-3. Próximo ataque usa arma antiga
-4. Pressionar Q agora inclui a arma coletada no ciclo
+**Boss2:** Sprite azul, BossAreaController, _dangerZonePrefab = DangerZone, _projectilePrefab = EnemyProjectile.
 
-**Teste 5 — Dano com RunUpgradeManager (se disponível):**
-1. Se RunUpgradeManager existe na cena, coletar upgrade de dano
-2. Atacar inimigo → dano final = weapon.damage × DamageMultiplier
+**Boss3:** Sprite verde, BossHybridController, _projectilePrefab = EnemyProjectile.
 
-### 7. Configurar WeaponPickup nos prefabs de sala (futuro)
+### S11 — Atualizar Arena Prefabs
 
-Para spawnar pickups em salas de reward, adicionar o prefab WeaponPickup como filho de `RewardRoom.prefab` com `_weaponData` configurado no Inspector.
+- BossArena_5: `_bossPrefabs[0]` = Boss1
+- BossArena_10: `_bossPrefabs[0]` = Boss2
+- BossArena_15: `_bossPrefabs[0]` = Boss3
+
+### S12 — Atualizar cena Main
+
+DungeonGenerator: `_enemyPrefab`, `_enemyFastPrefab`, `_enemyHeavyPrefab`, `_enemyRangedPrefab`.
 
 ---
 
 ## Atualização do SETUP.md
 
-Adicionar nova seção após a Seção 13 (Fase 7). O bloco abaixo é o conteúdo exato a ser adicionado:
+Adicionar seção **15** ao final:
 
-```
-## 14. Fase 8 — Sistema de Armas
-
-### 14.1 Arquivos Criados
-
-| Arquivo | Função |
-|---------|--------|
-| `Assets/Scripts/Combat/WeaponType.cs` | Enum: Sword, Spear, Axe, Dagger |
-| `Assets/Scripts/Combat/AttackPattern.cs` | Enum: HorizontalSwing, ForwardThrust, OverheadSmash, QuickStab |
-| `Assets/Scripts/Combat/WeaponDataSO.cs` | ScriptableObject de dados de arma |
-| `Assets/Scripts/Combat/WeaponVisualController.cs` | Controla visual da arma equipada |
-| `Assets/Scripts/Combat/WeaponPickup.cs` | Pickup de arma no chão |
-| `Assets/Scenes/WeaponTestScene.unity` | Cena dedicada para testar armas |
-
-### 14.2 Arquivos Modificados
-
-| Arquivo | O que mudou |
-|---------|-------------|
-| `Assets/Scripts/Combat/WeaponController.cs` | Refatorado: lê stats de WeaponDataSO, usa FacingDirection, suporta EquipWeapon(), lista de armas disponíveis com swap por Q, integrado com RunUpgradeManager.DamageMultiplier (global da run). EquipWeapon sempre adiciona à lista; durante ataque não equipa mas arma entra no ciclo. |
-| `Assets/Prefabs/SwordHitbox.prefab` | BoxCollider2D Size ajustado para 0.8 (base oficial) |
-
-### 14.3 ScriptableObjects — Armas
-
-Criar em `Assets/Data/Weapons/`:
-
-| Asset | weaponType | damage | attackRange | knockback | cooldown | pattern | cor placeholder |
-|-------|-----------|--------|-------------|-----------|----------|---------|----------------|
-| WeaponSword | Sword | 10 | 0.8 | 2.0 | 0.3 | HorizontalSwing | cinza (0.85, 0.85, 0.9) |
-| WeaponSpear | Spear | 8 | 1.3 | 1.5 | 0.4 | ForwardThrust | azul (0.3, 0.5, 0.9) |
-| WeaponAxe | Axe | 18 | 0.7 | 4.0 | 0.6 | OverheadSmash | vermelho (0.9, 0.3, 0.3) |
-| WeaponDagger | Dagger | 5 | 0.5 | 1.0 | 0.15 | QuickStab | verde (0.3, 0.8, 0.3) |
-
-Como criar: Assets → Create → Combat → Weapon Data
-
-### 14.4 Prefab Player — Visuais de Arma
-
-Hierarquia atualizada do Player:
-
-```
-Player
-├── Rigidbody2D
-├── BoxCollider2D
-├── PlayerController.cs
-├── PlayerHealth.cs
-├── WeaponController.cs
-│   ├── _defaultWeapon = WeaponSword.asset
-│   ├── _hitboxPrefab = SwordHitbox.prefab
-│   ├── _player = Player (this)
-│   └── _visualController = WeaponVisualController (self)
-├── WeaponVisualController.cs
-│   ├── _visualSword = Visual_Sword
-│   ├── _visualSpear = Visual_Spear
-│   ├── _visualAxe = Visual_Axe
-│   └── _visualDagger = Visual_Dagger
-├── Visual_Sword (SpriteRenderer, color=cinza, ATIVO)
-├── Visual_Spear (SpriteRenderer, color=azul, DESATIVO)
-├── Visual_Axe (SpriteRenderer, color=vermelho, DESATIVO)
-├── Visual_Dagger (SpriteRenderer, color=verde, DESATIVO)
-└── GroundCheck
-```
-
-### 14.5 Prefab WeaponPickup
-
-```
-WeaponPickup (prefab)
-├── SpriteRenderer (gem/item placeholder)
-├── CircleCollider2D (isTrigger=true, radius=0.3)
-└── WeaponPickup.cs
-    └── _weaponData: configurar no Inspector de cada instância
-```
-
-### 14.6 Cena de Teste (WeaponTestScene)
-
-Criar cena dedicada em `Assets/Scenes/WeaponTestScene.unity`:
-
-```
-WeaponTestScene
-├── Main Camera (CameraFollow.cs, _target = Player)
-├── Player (Player.prefab)
-├── Chão (SpriteRenderer + BoxCollider2D, Layer = Ground)
-├── Pickup_Spear (WeaponPickup, _weaponData = WeaponSpear.asset)
-├── Pickup_Axe (WeaponPickup, _weaponData = WeaponAxe.asset)
-├── Pickup_Dagger (WeaponPickup, _weaponData = WeaponDagger.asset)
-└── DummyEnemy (Enemy.prefab, opcional)
-```
-
-### 14.7 Como Testar
-
-1. Abrir cena **WeaponTestScene**
-2. Play → atacar → verificar hitbox na direção correta (sword, cinza)
-3. Andar sobre Pickup_Axe → visual muda para vermelho
-4. Atacar com Axe → mais lento, mais dano, mais knockback, offset acima
-5. Pressionar Q → ciclo entre armas disponíveis
-6. Coletar Spear → Q agora cicla entre Sword, Axe, Spear
-7. Verificar que coletar pickup durante ataque adiciona arma à lista mas não equipa (pickup não é perdido)
-8. Verificar que RunUpgradeManager.DamageMultiplier afeta dano (se disponível na cena)
-
-### 14.8 Troubleshooting
-
-| Problema | Solução |
-|----------|---------|
-| Hitbox não aparece | Verificar _defaultWeapon conectado, _hitboxPrefab = SwordHitbox |
-| Visual não muda | Verificar WeaponVisualController refs, Visual_* GameObjects ativos/desativos |
-| Swap Q não funciona | Verificar _availableWeapons.Count > 1. Coletar pickup primeiro |
-| Dano errado | Verificar valores no WeaponDataSO. Checar RunUpgradeManager.Instance existe |
-| Troca durante ataque | Comportamento esperado: EquipWeapon() adiciona à lista mas não equipa se _isAttacking. Pickup não é perdido. |
-| Hitbox acerta múltiplas vezes | Verificar HashSet _hitTargets no SwordHitbox. Initialize() deve limpar o set a cada ataque. |
-| Hitbox tamanho errado | Verificar SwordHitbox BoxCollider2D Size = 0.8. Verificar attackRange no SO |
-```
+- 15.1 — Visão Geral (arquétipos, EnemyBase, IBoss, distribuição por floor)
+- 15.2 — Comportamento por Arquétipo (tabela stats + gameplay)
+- 15.3 — Layer EnemyProjectile
+- 15.4 — Hierarquia de Scripts (diagrama)
+- 15.5 — Prefabs Criados
+- 15.6 — Sistema de Bosses
+- 15.7 — Como Testar
+- 15.8 — Troubleshooting
 
 ---
 
 ## Checklist de Implementação
 
-- [x] Passo 1: Criar `WeaponType.cs` e `AttackPattern.cs`
-  - Arquivo: `Assets/Scripts/Combat/WeaponType.cs`
-  - Arquivo: `Assets/Scripts/Combat/AttackPattern.cs`
-  - O que fazer: Enums simples, sem dependências
+### Bloco 1: Fundação
 
-- [x] Passo 2: Criar `WeaponDataSO.cs`
-  - Arquivo: `Assets/Scripts/Combat/WeaponDataSO.cs`
-  - O que fazer: ScriptableObject com campos de arma. Seguir padrão de RunUpgradeSO.
+- [ ] **1.1** Criar `Assets/Scripts/Enemies/EnemyType.cs`
+- [ ] **1.2** Criar `Assets/Scripts/Enemies/EnemyBase.cs`
+- [ ] **1.3** Criar `Assets/Scripts/Bosses/IBoss.cs`
+- [ ] **1.4** Refatorar `Assets/Scripts/Enemies/EnemyController.cs`
+  - Herdar EnemyBase, remover lógica de vida/morte
+  - Métodos isolados por tipo
+  - LayerMask serializado (_playerLayer) em todos os layer checks
+  - Charge coroutine para heavy
+  - Timeout no-hit para ranged
+  - Passar `this` para EnemyProjectile.Initialize
 
-- [x] Passo 3: Refatorar `WeaponController.cs`
-  - Arquivo: `Assets/Scripts/Combat/WeaponController.cs`
-  - O que fazer: Substituir hardcoded por WeaponDataSO. Adicionar EquipWeapon(), availableWeapons list, CycleWeapon() com lógica real, BaseHitboxSize const, GetAttackOffset(), RunUpgradeManager integration. EquipWeapon sempre adiciona à lista; se _isAttacking, não equipa mas arma entra no ciclo. Awake chama EquipVisual para sincronizar visual.
+### Bloco 2: Projétil e DangerZone
 
-- [x] Passo 4: Criar `WeaponVisualController.cs`
-  - Arquivo: `Assets/Scripts/Combat/WeaponVisualController.cs`
-  - O que fazer: MonoBehaviour com 4 GameObject refs, método EquipVisual(WeaponType), ativar/desativar.
+- [ ] **2.1** Criar `Assets/Scripts/Enemies/EnemyProjectile.cs`
+  - Rigidbody2D velocity
+  - Ignora Enemy layer
+  - Reseta _noHitTimer do owner ao acertar
+- [ ] **2.2** Criar `Assets/Scripts/Bosses/DangerZone.cs`
+- [ ] **2.3** Criar prefab EnemyProjectile
+- [ ] **2.4** Criar prefab DangerZone
 
-- [x] Passo 5: Criar `WeaponPickup.cs`
-  - Arquivo: `Assets/Scripts/Combat/WeaponPickup.cs`
-  - O que fazer: MonoBehaviour seguindo padrão de RunePickup. Guard _weaponData null (LogError + return). Trigger collision → EquipWeapon via GetComponentInParent.
+### Bloco 3: Prefabs Inimigos
 
-- [x] Passo 6: Criar 4 ScriptableObject assets
-  - Arquivos: `Assets/Data/Weapons/Weapon{Sword,Spear,Axe,Dagger}.asset`
-  - O que fazer: Assets → Create → Combat → Weapon Data. Configurar valores da tabela (cores específicas por arma).
+- [ ] **3.1** Criar EnemyFast.prefab
+- [ ] **3.2** Criar EnemyHeavy.prefab
+- [ ] **3.3** Criar EnemyRanged.prefab
+- [ ] **3.4** Atualizar Enemy.prefab
+- [ ] **3.5** Atualizar EliteEnemy.prefab
 
-- [x] Passo 7: Ajustar SwordHitbox prefab
-  - Prefab: `Assets/Prefabs/SwordHitbox.prefab`
-  - O que fazer: BoxCollider2D Size = 0.8 (base oficial para cálculo de scale).
+### Bloco 4: Integração
 
-- [x] Passo 8: Atualizar Player prefab — visuais
-  - Prefab: `Assets/Prefabs/Player.prefab`
-  - O que fazer: Criar 4 child GameObjects (Visual_Sword/Spear/Axe/Dagger) com SpriteRenderer e cor placeholder. Adicionar WeaponVisualController. Conectar refs.
+- [ ] **4.1** Modificar RoomController.cs
+- [ ] **4.2** Modificar DungeonGenerator.cs
+- [ ] **4.3** Atualizar cena Main
 
-- [x] Passo 9: Atualizar Player prefab — WeaponController
-  - Prefab: `Assets/Prefabs/Player.prefab`
-  - O que fazer: Reconfigurar WeaponController: _defaultWeapon=Sword.asset, _visualController=referência.
+### Bloco 5: Bosses
 
-- [x] Passo 10: Criar WeaponPickup prefab
-  - Prefab: `Assets/Prefabs/WeaponPickup.prefab`
-  - O que fazer: Create Empty, adicionar SpriteRenderer + CircleCollider2D (trigger) + WeaponPickup.cs. Converter em prefab.
+- [ ] **5.1** Criar BossMeleeController.cs (flag _isActive)
+- [ ] **5.2** Criar BossAreaController.cs (limite _maxDangerZones)
+- [ ] **5.3** Criar BossHybridController.cs (flag _isActive)
+- [ ] **5.4** Criar prefabs Boss1, Boss2, Boss3
+- [ ] **5.5** Modificar BossFloorHandler.cs (IBoss)
+- [ ] **5.6** Atualizar arena prefabs
 
-- [x] Passo 11: Criar cena de teste
-  - Cena: `Assets/Scenes/WeaponTestScene.unity`
-  - O que fazer: Nova cena com Player, chão, 3 pickups (Spear, Axe, Dagger), dummy enemy opcional.
+### Bloco 6: SETUP.md
 
-- [x] Passo 12: Testar em Play Mode
-  - Cena: WeaponTestScene
-  - O que fazer: Atacar com sword. Coletar pickups. Verificar swap com Q. Verificar visual, hitbox, dano, bloqueio de troca durante ataque.
+- [ ] **6.1** Adicionar seção 15
 
-- [x] Passo 13: Atualizar `SETUP.md`
-  - Arquivo: `SETUP.md`
-  - O que fazer: Adicionar Seção 14 com toda a documentação de setup da Fase 8 (código pronto no bloco acima).
+### Bloco 7: Testes
 
----
-
-## Perguntas
-
-> Todas as 5 perguntas originais foram respondidas pelo usuário e endereçadas neste documento.
-> As 20 notas de revisão foram incorporadas ao spec (ver seção "Notas de Revisão — Resolvidas" no final).
-> Resumo das respostas aplicadas:
-
-1. **SwordHitbox size** → Resolvido: Prefab ajustado para Size = 0.8. Campo `const BaseHitboxSize = 0.8f` no WeaponController.
-
-2. **Swap de arma** → Resolvido: `availableWeapons` list + `currentWeaponIndex` implementados. Q cicla entre disponíveis. Pickup adiciona na lista.
-
-3. **Visual placeholder** → Resolvido: Child visual com cor distinta por arma (cinza/azul/vermelho/verde). Não usar sprite de idle puro.
-
-4. **DamageMultiplier** → Resolvido: Comportamento mantido. É global da run, aplica no hit, não é afetado por troca de arma. Comentário no código esclarece.
-
-5. **Cena de teste** → Resolvido: `WeaponTestScene.unity` criada como cena dedicada.
+- [ ] **7.1** Melee — comportamento inalterado
+- [ ] **7.2** Fast — chase rápido, sem pausas
+- [ ] **7.3** Heavy — lento, knockback forte, charge
+- [ ] **7.4** Ranged — mantém distância, atira projéteis
+- [ ] **7.5** Projétil — acerta player, ignora enemy, morre no ground
+- [ ] **7.6** Elite — maior, amarelo, bônus por tipo
+- [ ] **7.7** Boss 1 — combos, enraged em 30%
+- [ ] **7.8** Boss 2 — danger zones (limite 5), projéteis caem
+- [ ] **7.9** Boss 3 — alternância melee/ranged
+- [ ] **7.10** Variedade por floor
+- [ ] **7.11** Múltiplos ranged na mesma sala
+- [ ] **7.12** Múltiplos projéteis simultâneos
+- [ ] **7.13** Boss + player colidindo constantemente
+- [ ] **7.14** Stress test (10+ inimigos)
 
 ---
 
 ## Validação
 
-- [ ] Scripts compilam sem erro no Unity (compilação automática ao salvar)
-- [ ] 4 ScriptableObject assets criados em `Assets/Data/Weapons/`
-- [ ] Player prefab tem WeaponVisualController com 4 visuais conectados
-- [ ] Player prefab tem WeaponController com _defaultWeapon = WeaponSword.asset
-- [ ] SwordHitbox prefab tem BoxCollider2D Size = 0.8
-- [ ] Sword ataca na direção correta (FacingDirection, não _player.right)
-- [ ] Sword hitbox tem tamanho correto (attackRange=0.8, scale=1.0)
-- [ ] WeaponPickup com _weaponData vazio não quebra (LogError + return)
-- [ ] Visual_* posicionados com sorting acima do player (não some atrás do sprite)
-- [ ] Ataques funcionam com FacingDirection horizontal (esquerda/direita apenas)
-- [ ] Visual muda ao trocar de arma (cores distintas visíveis)
-- [ ] Pressionar Q cicla entre armas disponíveis
-- [ ] Coletar pickup durante ataque: arma entra na lista mas não equipa (pickup não é perdido)
-- [ ] Ataque só acerta cada inimigo uma vez (HashSet no hitbox)
-- [ ] Dano é afetado por RunUpgradeManager.DamageMultiplier (global da run)
-- [ ] Cena WeaponTestScene existe e pode ser usada para teste rápido (sem dungeon managers)
-- [ ] SETUP.md seção 14 existe com passo a passo completo
+- [ ] Scripts compilam sem erro
+- [ ] EnemyBase compartilhada entre todos os inimigos
+- [ ] IBoss usado no BossFloorHandler
+- [ ] Projétil usa Rigidbody2D velocity
+- [ ] Todos os layer checks padronizados (LayerMask serializado)
+- [ ] EnemyProjectile ignora Enemy layer e reseta _noHitTimer
+- [ ] DangerZone com limite de instâncias no Boss2
+- [ ] Flag _isActive em todos os bosses
+- [ ] SETUP.md atualizado
+- [ ] Testável em Play Mode
 
 ---
 
-## Notas de Revisão — Resolvidas
+## Melhorias Futuras
 
-Todas as 20 notas foram endereçadas e incorporadas ao spec:
+### Gameplay
+- Inimigos voadores
+- Status effects (poison, burn)
+- Mini-boss
 
-| # | Nota | Resolução |
-|---|------|-----------|
-| 1 | Bloqueio de pickup durante ataque | `EquipWeapon()` sempre adiciona à lista; se `_isAttacking`, não equipa agora mas arma entra no ciclo de Q. Pickup sempre consumido. |
-| 2 | Multi-hit no mesmo inimigo | `SwordHitbox` ganha `HashSet<Collider2D> _hitTargets` — cada ataque só acerta o mesmo alvo uma vez. Set limpo em `Initialize()`. |
-| 3 | Knockback direto no Rigidbody2D | Mantido AddForce direto por agora. Adicionado TODO futuro para interface `IKnockbackable` — inimigo controla como reage. |
-| 4 | FacingDirection nunca zero | Documentado em Pré-condições: `_facingDirection` só atualiza quando `_horizontalInput != 0`, caso contrário retém último valor válido. |
-| 5 | Visual assume sword no Awake | `WeaponVisualController.Awake()` removido. `WeaponController.Awake()` chama `EquipVisual(_equippedWeapon.weaponType)` para sincronizar. |
-| 6 | GetComponent no pickup | `WeaponPickup` usa `GetComponentInParent<WeaponController>()` — funciona com collider em child objects. |
-| 7 | RunUpgradeManager.GetDamageMultiplier() | Confirmado como pré-condição. Método existe em `RunUpgradeManager.cs:88-91`, retorna `float`. |
-| 8 | Duplicatas por tipo na lista | Documentado em Pré-condições: cada arma base tem um único `WeaponDataSO`. Comparação por referência é suficiente. |
-| 9 | Cena de teste e dungeon managers | Seção de teste atualizada: NÃO carregar FloorManager/DungeonGenerator. RunUpgradeManager é opcional. |
-| 10 | Comportamento do pickup ao equipar | Definido: adiciona à lista se não existe, equipa imediatamente se não atacando, sempre consome pickup. |
-| 11 | Nome SwordHitbox | Decisão D6 atualizada: manter agora, renomear para `WeaponHitbox` quando fase estabilizar (TODO futuro). |
-| 12 | WeaponDataSO campos públicos | Nota adicionada: concessão de velocidade para protótipo. Preferir `[SerializeField] private` com props read-only em produção. |
-| 13 | AttackPattern limitado | Nota adicionada: padrão atual controla apenas offset/feeling. Animação e multi-stage attacks ficam para fase posterior. |
-| 14 | Guard _weaponData null | `WeaponPickup.OnTriggerEnter2D` valida `_weaponData == null` com `LogError` + return antes de qualquer lógica. |
-| 15 | WeaponController placement | Documentado: WeaponController vive no root do Player prefab. Pickup usa `GetComponentInParent`. |
-| 16 | Direção só horizontal | Nota de escopo em Pré-condições: `FacingDirection` é sempre esquerda/direita (2D side-scroller). Ataque vertical fica para fase posterior. |
-| 17 | GetAttackOffset usa x apenas | `GetAttackOffset` usa `facingDir.x` — consistente com movimentação horizontal. Decisão documentada. |
-| 18 | Posicionamento dos placeholders | Passo de setup atualizado: posição local consistente, sorting acima do player, não sumir atrás do sprite. |
-| 19 | RunUpgradeManager default | Comentário no código: se `Instance == null`, multiplicador = 1f (dano base do SO). |
-| 20 | IDamageable contrato | Pré-condição adicionada: `IDamageable.TakeDamage(int)` é o contrato mínimo. Compatível com inimigos, bosses, dummies, objetos destrutíveis. |
+### Sistema
+- Object Pooling para EnemyProjectile e DangerZone
+- Behavior modular (Strategy Pattern) para EnemyController
+- AI State Machine
+- Barra de vida nos inimigos
+
+### UX
+- Hit feedback (flash ao receber dano, knockback visual)
+- Partículas placeholder
+- Sons
