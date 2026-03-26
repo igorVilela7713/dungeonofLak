@@ -16,8 +16,8 @@ MonoBehaviour:
   weaponName: Dagger
   damage: 5
   attackCooldown: 0.15
-  attackDuration: 0.06
-  attackRange: 0.5
+  attackDuration: 0.18
+  attackRange: 0.9
   knockbackForce: 1
   attackPattern: 3
   placeholderColor: {r: 0.061502814, g: 1, b: 0, a: 1}

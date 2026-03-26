@@ -1081,7 +1081,7 @@ WeaponController.Attack()
       → pega FacingDirection do PlayerController
       → calcula offset via GetAttackOffset(facingDir)
       → Instantiate(_hitboxPrefab) na posição correta
-      → ajusta localScale = attackRange / BaseHitboxSize
+      → ajusta localScale: xScale = dir.x < 0 ? -hitboxScale : hitboxScale
       → SwordHitbox.Initialize(this) — limpa HashSet de hits
   → StartCoroutine(AttackRoutine())
       → espera attackDuration
@@ -1141,8 +1141,8 @@ WeaponController.CycleWeapon()
 | `Assets/Scripts/Combat/WeaponType.cs` | Enum: `Sword`, `Spear`, `Axe`, `Dagger` |
 | `Assets/Scripts/Combat/AttackPattern.cs` | Enum: `HorizontalSwing`, `ForwardThrust`, `OverheadSmash`, `QuickStab` |
 | `Assets/Scripts/Combat/WeaponDataSO.cs` | ScriptableObject com todos os dados de uma arma |
-| `Assets/Scripts/Combat/WeaponVisualController.cs` | Ativa/desativa child visual conforme arma equipada |
-| `Assets/Scripts/Combat/WeaponPickup.cs` | Trigger no chão que equipa arma ao player |
+| `Assets/Scripts/Combat/WeaponVisualController.cs` | Ativa/desativa child visual conforme arma equipada. Espelha sprite (flipX) e posição X da arma conforme FacingDirection do player. |
+| `Assets/Scripts/Combat/WeaponPickup.cs` | Trigger no chão que equipa arma ao player. Espelha sprite conforme FacingDirection do player. |
 
 ---
 
@@ -1185,8 +1185,8 @@ WeaponController.CycleWeapon()
 |-------|-------|------------|
 | damage | 10 | Dano base por acerto |
 | attackCooldown | 0.3 | Segundos entre ataques |
-| attackDuration | 0.1 | Segundos que a hitbox fica ativa |
-| attackRange | 0.8 | Alcance em unidades. BaseHitboxSize = 0.8, então scale = 1.0 |
+| attackDuration | 0.15 | Segundos que a hitbox fica ativa |
+| attackRange | 1.1 | Alcance em unidades. BaseHitboxSize = 0.8, então scale = 1.375 |
 | knockbackForce | 2.0 | Força de empurrão no alvo |
 
 **Seção Attack Pattern:**
@@ -1221,8 +1221,8 @@ WeaponController.CycleWeapon()
 |-------|-------|------------|
 | damage | 8 | Menor dano que sword, mas mais alcance |
 | attackCooldown | 0.4 | Mais lenta que sword |
-| attackDuration | 0.12 | Hitbox fica ativa um pouco mais |
-| attackRange | 1.3 | Maior alcance — scale = 1.3/0.8 = 1.625 |
+| attackDuration | 0.20 | Hitbox fica ativa um pouco mais |
+| attackRange | 1.6 | Maior alcance — scale = 1.6/0.8 = 2.0 |
 | knockbackForce | 1.5 | Menor knockback |
 
 **Seção Attack Pattern:**
@@ -1257,8 +1257,8 @@ WeaponController.CycleWeapon()
 |-------|-------|------------|
 | damage | 18 | Maior dano — arma lenta e pesada |
 | attackCooldown | 0.6 | Mais lenta |
-| attackDuration | 0.15 | Hitbox fica ativa mais tempo |
-| attackRange | 0.7 | Menor alcance — scale = 0.7/0.8 = 0.875 |
+| attackDuration | 0.25 | Hitbox fica ativa mais tempo |
+| attackRange | 1.2 | Alcance — scale = 1.2/0.8 = 1.5 |
 | knockbackForce | 4.0 | Knockback alto — empurra muito |
 
 **Seção Attack Pattern:**
@@ -1293,8 +1293,8 @@ WeaponController.CycleWeapon()
 |-------|-------|------------|
 | damage | 5 | Dano baixo — compensado pela velocidade |
 | attackCooldown | 0.15 | Muito rápida — quase 2x mais rápido que sword |
-| attackDuration | 0.06 | Hitbox aparece e some rápido |
-| attackRange | 0.5 | Curto alcance — scale = 0.5/0.8 = 0.625 |
+| attackDuration | 0.18 | Hitbox fica ativa tempo suficiente para acertar |
+| attackRange | 0.9 | Alcance — scale = 0.9/0.8 = 1.125 |
 | knockbackForce | 1.0 | Knockback mínimo |
 
 **Seção Attack Pattern:**
@@ -1342,14 +1342,14 @@ Este passo ajusta o tamanho base do collider da hitbox para corresponder à cons
 
 **Por que 0.8?** O `WeaponController` usa a fórmula `attackRange / BaseHitboxSize` para calcular o `localScale` da hitbox. Com `BaseHitboxSize = 0.8`:
 
-- Sword (range 0.8): scale = 1.0 → hitbox com 0.8×0.8 unidades
-- Spear (range 1.3): scale = 1.625 → hitbox com 1.3×1.3 unidades
-- Axe (range 0.7): scale = 0.875 → hitbox com 0.7×0.7 unidades
-- Dagger (range 0.5): scale = 0.625 → hitbox com 0.5×0.5 unidades
+- Sword (range 1.1): scale = 1.375 → hitbox com 1.1×1.1 unidades
+- Spear (range 1.6): scale = 2.0 → hitbox com 1.6×1.6 unidades
+- Axe (range 1.2): scale = 1.5 → hitbox com 1.2×1.2 unidades
+- Dagger (range 0.9): scale = 1.125 → hitbox com 0.9×0.9 unidades
 
 ---
 
-### 14.6 Atualizar o Prefab Player — WeaponController _ Conitnuar daqui
+### 14.6 Atualizar o Prefab Player — WeaponController
 
 Abrir o prefab do Player para editar. Todos os passos abaixo são feitos **dentro do Prefab Editor**.
 
@@ -1385,6 +1385,8 @@ O componente `WeaponController` foi refatorado. Os campos antigos (`_damage`, `_
 ### 14.7 Atualizar o Prefab Player — Visuais de Arma
 
 Ainda dentro do Prefab Editor do Player, criar os 4 visuais placeholder e o componente WeaponVisualController.
+
+> O `WeaponVisualController` agora espelha o sprite (flipX) e a posição X da arma automaticamente conforme o `FacingDirection` do player. Quando o player vira para a esquerda, o sprite da arma vira e a posição X é invertida para o outro lado do player.
 
 #### 14.7.1 Criar Visual_Sword
 
@@ -1741,10 +1743,10 @@ localScale = attackRange / BaseHitboxSize
 
 | Arma | attackRange | Scale | Tamanho real da hitbox |
 |------|-------------|-------|----------------------|
-| Sword | 0.8 | 1.0 | 0.8 × 0.8 unidades |
-| Spear | 1.3 | 1.625 | 1.3 × 1.3 unidades |
-| Axe | 0.7 | 0.875 | 0.7 × 0.7 unidades |
-| Dagger | 0.5 | 0.625 | 0.5 × 0.5 unidades |
+| Sword | 1.1 | 1.375 | 1.1 × 1.1 unidades |
+| Spear | 1.6 | 2.0 | 1.6 × 1.6 unidades |
+| Axe | 1.2 | 1.5 | 1.2 × 1.2 unidades |
+| Dagger | 0.9 | 1.125 | 0.9 × 0.9 unidades |
 
 #### Attack Pattern (Offset de Ataque)
 
@@ -1774,10 +1776,11 @@ Cada `AttackPattern` define onde a hitbox aparece relativa ao player:
 4. Pressionar **mouse esquerdo** (ou Enter, ou botão A do gamepad)
 5. Verificações:
    - Uma hitbox aparece brevemente na frente do player (na direção que ele olha)
-   - A hitbox desaparece após ~0.1 segundos
+    - A hitbox desaparece após ~0.15 segundos
    - Se houver um DummyEnemy na frente, ele toma dano (fica vermelho)
 6. Andar para a esquerda (tecla A) e atacar novamente:
    - A hitbox aparece na **esquerda** (não na direita)
+   - O visual da arma também vira para a esquerda (flipX + posição X invertida)
    - Confirma que `FacingDirection` está funcionando
 
 #### Teste 2 — Troca de Arma via Pickup
@@ -1816,7 +1819,7 @@ Cada `AttackPattern` define onde a hitbox aparece relativa ao player:
 #### Teste 4 — Bloqueio de Troca Durante Ataque
 
 1. Equipar a Axe
-2. Atacar → durante os 0.15s de duração da hitbox, andar sobre o Pickup_Spear
+2. Atacar → durante os 0.25s de duração da hitbox, andar sobre o Pickup_Spear
 3. Verificações:
    - O pickup é **destruído** (consumido)
    - A Spear é **adicionada à lista** `_availableWeapons`
@@ -1838,22 +1841,22 @@ Cada `AttackPattern` define onde a hitbox aparece relativa ao player:
 
 Depois de configurar tudo, passe por esta lista:
 
-- [ ] Scripts compilam sem erro (ver Console do Unity)
-- [ ] 4 ScriptableObject assets existem em `Assets/Data/Weapons/`
-- [ ] Cada SO tem `weaponType`, `damage`, `attackRange`, `attackPattern`, `placeholderColor` preenchidos
-- [ ] Player prefab tem `WeaponVisualController` com 4 referências conectadas
-- [ ] Player prefab tem `WeaponController` com `_defaultWeapon` = WeaponSword.asset
-- [ ] Player prefab tem 4 visuais (Visual_Sword/Spear/Axe/Dagger)
-- [ ] Visual_Sword está ATIVO, os outros 3 estão DESATIVADOS
-- [ ] SwordHitbox prefab tem BoxCollider2D Size = 0.8
-- [ ] WeaponPickup prefab tem CircleCollider2D com Is Trigger = true
-- [ ] WeaponTestScene existe em `Assets/Scenes/`
-- [ ] Na cena de teste: Player, Chão, 3 pickups com `_weaponData` configurado
-- [ ] Atacar com sword → hitbox aparece na direção correta (esquerda/direita)
-- [ ] Coletar pickup → visual muda
-- [ ] Pressionar Q → ciclo entre armas
-- [ ] Coletar pickup durante ataque → arma entra na lista, não equipa
-- [ ] Inimigo toma dano uma vez por ataque (sem multi-hit)
+- [x] Scripts compilam sem erro (ver Console do Unity)
+- [x] 4 ScriptableObject assets existem em `Assets/Data/Weapons/`
+- [x] Cada SO tem `weaponType`, `damage`, `attackRange`, `attackPattern`, `placeholderColor` preenchidos
+- [x] Player prefab tem `WeaponVisualController` com 4 referências conectadas
+- [x] Player prefab tem `WeaponController` com `_defaultWeapon` = WeaponSword.asset
+- [x] Player prefab tem 4 visuais (Visual_Sword/Spear/Axe/Dagger)
+- [x] Visual_Sword está ATIVO, os outros 3 estão DESATIVADOS
+- [x] SwordHitbox prefab tem BoxCollider2D Size = 0.8
+- [x] WeaponPickup prefab tem CircleCollider2D com Is Trigger = true
+- [x] WeaponTestScene existe em `Assets/Scenes/`
+- [x] Na cena de teste: Player, Chão, 3 pickups com `_weaponData` configurado
+- [x] Atacar com sword → hitbox aparece na direção correta (esquerda/direita)
+- [x] Coletar pickup → visual muda
+- [x] Pressionar Q → ciclo entre armas
+- [x] Coletar pickup durante ataque → arma entra na lista, não equipa
+- [x] Inimigo toma dano uma vez por ataque (sem multi-hit)
 
 ---
 

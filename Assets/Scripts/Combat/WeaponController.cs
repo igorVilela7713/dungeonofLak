@@ -127,7 +127,8 @@ public class WeaponController : MonoBehaviour
         _activeHitbox = Instantiate(_hitboxPrefab, spawnPos, Quaternion.identity, _player);
 
         float hitboxScale = _equippedWeapon.attackRange / BaseHitboxSize;
-        _activeHitbox.transform.localScale = new Vector3(hitboxScale, hitboxScale, 1f);
+        float xScale = dir.x < 0 ? -hitboxScale : hitboxScale;
+        _activeHitbox.transform.localScale = new Vector3(xScale, hitboxScale, 1f);
 
         SwordHitbox swordHitbox = _activeHitbox.GetComponent<SwordHitbox>();
         swordHitbox.Initialize(this);

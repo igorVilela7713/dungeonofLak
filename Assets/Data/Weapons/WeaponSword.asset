@@ -16,8 +16,8 @@ MonoBehaviour:
   weaponName: Sword
   damage: 10
   attackCooldown: 0.3
-  attackDuration: 0.1
-  attackRange: 0.8
+  attackDuration: 0.15
+  attackRange: 1.1
   knockbackForce: 2
   attackPattern: 0
   placeholderColor: {r: 0.4056604, g: 0.4037469, b: 0.4037469, a: 1}

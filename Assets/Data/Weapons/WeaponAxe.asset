@@ -16,8 +16,8 @@ MonoBehaviour:
   weaponName: Axe
   damage: 18
   attackCooldown: 0.6
-  attackDuration: 0.16
-  attackRange: 0.7
+  attackDuration: 0.25
+  attackRange: 1.2
   knockbackForce: 4
   attackPattern: 2
   placeholderColor: {r: 1, g: 0, b: 0, a: 1}

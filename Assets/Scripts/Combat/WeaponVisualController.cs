@@ -9,6 +9,33 @@ public class WeaponVisualController : MonoBehaviour
     [SerializeField] private GameObject _visualDagger;
 
     private GameObject _currentVisual;
+    private SpriteRenderer _currentSpriteRenderer;
+    private PlayerController _playerController;
+    private Vector3 _originalLocalPos;
+
+    private void Awake()
+    {
+        _playerController = GetComponentInParent<PlayerController>();
+    }
+
+    private void Update()
+    {
+        if (_playerController != null && _currentSpriteRenderer != null)
+        {
+            bool facingLeft = _playerController.FacingDirection.x < 0;
+            _currentSpriteRenderer.flipX = facingLeft;
+
+            if (_currentVisual != null)
+            {
+                Vector3 pos = _currentVisual.transform.localPosition;
+                _currentVisual.transform.localPosition = new Vector3(
+                    facingLeft ? -Mathf.Abs(_originalLocalPos.x) : Mathf.Abs(_originalLocalPos.x),
+                    pos.y,
+                    pos.z
+                );
+            }
+        }
+    }
 
     public void EquipVisual(WeaponType type)
     {
@@ -42,5 +69,11 @@ public class WeaponVisualController : MonoBehaviour
         }
 
         _currentVisual = visual;
+        _currentSpriteRenderer = visual != null ? visual.GetComponent<SpriteRenderer>() : null;
+
+        if (visual != null)
+        {
+            _originalLocalPos = visual.transform.localPosition;
+        }
     }
 }
