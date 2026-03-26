@@ -446,11 +446,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1209324716572835299, guid: 91880d065cfa9e0459498b9a9237dd8d, type: 3}
       propertyPath: m_RefResolutionX
-      value: 320
+      value: 640
       objectReference: {fileID: 0}
     - target: {fileID: 1209324716572835299, guid: 91880d065cfa9e0459498b9a9237dd8d, type: 3}
       propertyPath: m_RefResolutionY
-      value: 180
+      value: 360
       objectReference: {fileID: 0}
     - target: {fileID: 3846246660853858608, guid: 91880d065cfa9e0459498b9a9237dd8d, type: 3}
       propertyPath: m_LocalPosition.x
@@ -559,6 +559,9 @@ MonoBehaviour:
   _rewardRoomPrefab: {fileID: 1713701259241261205, guid: 46990c369d4092d4dbb399ecf16145da, type: 3}
   _enemyPrefab: {fileID: 2225336838839417664, guid: ad714b182552d8e41a4c99418dae8009, type: 3}
   _eliteEnemyPrefab: {fileID: 2225336838839417664, guid: babde77dcf883804094255f4603bd2b9, type: 3}
+  _enemyFastPrefab: {fileID: 0}
+  _enemyHeavyPrefab: {fileID: 0}
+  _enemyRangedPrefab: {fileID: 0}
   _trapPrefabs:
   - {fileID: 7094310046900647275, guid: bb021c8403733a04e9d2b7248ed13ec3, type: 3}
   _runePickupPrefab: {fileID: 310493482355024303, guid: 1fcfb00e7477ca34c8be1296b92091e8, type: 3}
