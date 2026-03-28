@@ -2722,7 +2722,7 @@ Boss1 (prefab, Layer = Enemy)
 
 ---
 
-### 15.13 Prefab: Boss2 (Boss Area) ----- Parei aqui
+### 15.13 Prefab: Boss2 (Boss Area) 
 
 Este é o boss do andar 10. Ele cria danger zones no chão e projéteis caem do céu.
 
@@ -2935,7 +2935,7 @@ Boss3 (prefab, Layer = Enemy)
 
 Os prefabs de arena de boss (`BossArena_5`, `BossArena_10`, `BossArena_15`) criados na Fase 7 precisam ser atualizados para usar os novos bosses.
 
-#### 15.15.1 Atualizar BossArena_5
+#### 15.15.1 Atualizar BossArena_5 -- parei aqui
 
 1. No **Project window**, navegar até `Assets/Prefabs/`
 2. **Duplo clique** no prefab **BossArena_5** para abrir no Prefab Editor

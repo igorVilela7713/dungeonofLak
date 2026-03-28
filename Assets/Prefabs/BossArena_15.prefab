@@ -258,6 +258,7 @@ MonoBehaviour:
   _roomType: 0
   _spawnPoints: []
   _enemyPrefab: {fileID: 0}
+  _enemyPrefabs: []
   _eliteSpawnPoint: {fileID: 0}
   _eliteEnemyPrefab: {fileID: 0}
   _doors:
@@ -265,6 +266,9 @@ MonoBehaviour:
   - {fileID: 2585128122794106751}
   _player: {fileID: 0}
   _roomCenter: {fileID: 2666420802030033621}
+  _playerLayer:
+    serializedVersion: 2
+    m_Bits: 64
 --- !u!114 &696890694012942510
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -277,7 +281,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b5ae82c83fd33fc439236f79549be21a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossFloorHandler
-  _bossPrefab: {fileID: 2225336838839417664, guid: ad714b182552d8e41a4c99418dae8009, type: 3}
+  _bossPrefab: {fileID: 8148914733529375602, guid: e3f5738a75d9f2a43ba75bd7d747401c, type: 3}
+  _bossPrefabs: []
   _bossSpawnPoint: {fileID: 3183797344756958852}
   _roomController: {fileID: 1093606332791895343}
 --- !u!1 &4171810290991636148
