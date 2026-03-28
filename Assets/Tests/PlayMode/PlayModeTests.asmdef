@@ -2,7 +2,7 @@
     "name": "PlayModeTests",
     "rootNamespace": "",
     "references": [
-        "Assembly-CSharp",
+        "7bcb4973009b4f8fa81dc8db5065f173",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

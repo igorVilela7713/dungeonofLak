@@ -3,16 +3,60 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 
+// PlayMode-local TestEnemy (same logic as EditMode version)
+public class PlayModeTestEnemy : EnemyBase
+{
+    public int ExposedMaxHealth
+    {
+        get => _maxHealth;
+        set => _maxHealth = value;
+    }
+
+    public int ExposedCurrentHealth
+    {
+        get => _currentHealth;
+        set => _currentHealth = value;
+    }
+
+    public int ExposedDamageToPlayer
+    {
+        get => _damageToPlayer;
+        set => _damageToPlayer = value;
+    }
+
+    public int ExposedRuneValue
+    {
+        get => _runeValue;
+        set => _runeValue = value;
+    }
+
+    public bool ExposedIsDead
+    {
+        get => _isDead;
+        set => _isDead = value;
+    }
+
+    protected override void Awake()
+    {
+        _currentHealth = _maxHealth;
+    }
+
+    protected override void OnDeath()
+    {
+        _isDead = true;
+    }
+}
+
 public class EnemyBasePlayModeTests
 {
     private GameObject _enemyObj;
-    private TestEnemy _enemy;
+    private PlayModeTestEnemy _enemy;
 
     [SetUp]
     public void SetUp()
     {
-        _enemyObj = new GameObject("TestEnemy");
-        _enemy = _enemyObj.AddComponent<TestEnemy>();
+        _enemyObj = new GameObject("PlayModeTestEnemy");
+        _enemy = _enemyObj.AddComponent<PlayModeTestEnemy>();
         _enemy.ExposedMaxHealth = 30;
         _enemy.ExposedCurrentHealth = 30;
         _enemy.ExposedDamageToPlayer = 10;
