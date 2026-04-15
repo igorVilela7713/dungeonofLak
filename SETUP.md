@@ -1888,3 +1888,1428 @@ Depois de configurar tudo, passe por esta lista:
 | Ataque não respeita direção | FacingDirection não funciona | Verificar PlayerController tem a propriedade pública `FacingDirection` |
 | Erro "_defaultWeapon não atribuído" | Campo vazio no Inspector | Arrastar WeaponSword.asset para `_defaultWeapon` |
 | Visual_Sword não aparece | Sprite não atribuído | Adicionar qualquer sprite no SpriteRenderer do Visual_Sword |
+
+---
+
+## 15. Fase 9 — Inimigos Avançados e Ecossistema de Combate
+
+Esta fase adiciona tipos de inimigos avançados (Fast, Heavy, Ranged), uma classe base compartilhada (`EnemyBase`), bosses com padrões de ataque únicos, e distribuição de inimigos por andar.
+
+---
+
+### 15.1 Visão Geral do Sistema
+
+**Antes (Fase 8):**
+
+- Todos os inimigos usavam `EnemyController` com comportamento de Melee puro
+- Só existia 1 tipo de inimigo — perseguia e batia no player
+- Bosses não existiam — boss floor spawnavam Enemy normal
+- Sem projéteis inimigos
+- Layer check usava `NameToLayer("Player")` hardcoded
+
+**Depois (Fase 9):**
+
+- `EnemyBase` como classe compartilhada para todos os inimigos e bosses
+- 4 arquétipos: Melee, Fast, Heavy, Ranged — cada um com comportamento distinto
+- `IBoss` interface — bosses com padrões únicos (combo, area, híbrido)
+- `EnemyProjectile` — projétil com Rigidbody2D velocity, ignora layer Enemy
+- `DangerZone` — zona de dano por tick no chão
+- Distribuição de inimigos por andar (Melee no andar 1, Ranged só a partir do 7)
+- Layer check padronizado com `[SerializeField] LayerMask _playerLayer`
+
+**Hierarquia de Scripts:**
+
+```
+EnemyBase (MonoBehaviour, IDamageable)
+├── EnemyController (Melee, Fast, Heavy, Ranged)
+├── BossMeleeController (Boss 1 — andar 5)
+├── BossAreaController (Boss 2 — andar 10)
+└── BossHybridController (Boss 3 — andar 15)
+
+IBoss (interface)
+├── BossMeleeController
+├── BossAreaController
+└── BossHybridController
+```
+
+**Distribuição por Floor:**
+
+| Floor | Inimigos possíveis |
+|-------|-------------------|
+| 1–2 | Melee |
+| 3–4 | Melee, Fast |
+| 5–6 | Melee, Fast, Heavy |
+| 7+ | Melee, Fast, Heavy, Ranged |
+
+> Melee sempre está na pool — uma sala nunca spawna apenas ranged ou apenas heavy.
+
+**Fluxo de código — Spawn de inimigos:**
+
+```
+DungeonGenerator.GenerateFloor(floor)
+        ↓
+GetEnemyPrefabsForFloor(floor)
+  → Melee sempre na pool
+  → floor >= 3: + Fast
+  → floor >= 5: + Heavy
+  → floor >= 7: + Ranged
+        ↓
+rc.SetEnemyPrefabs(pool)
+        ↓
+RoomController.OnTriggerEnter2D(player)
+  → SpawnCombatEnemies()
+      → prefabToSpawn = _enemyPrefabs[Random.Range(0, count)]
+      → Instantiate(prefab) em cada spawn point
+      → controller.Initialize(_player)
+      → controller.ApplyDifficulty(hpMult, dmgMult, runeMult)
+      → AddComponent<EnemyDeathTracker>()
+```
+
+**Fluxo de código — Comportamento por tipo:**
+
+```
+EnemyController.Update()
+  → switch(_enemyType):
+      Melee:   ChasePlayer() — persegue, pula obstáculos
+      Fast:    ChasePlayerAggressive() — persegue sem pausas
+      Heavy:   HeavyBehavior() — charge quando perto (< 3 unidades)
+      Ranged:  RangedBehavior() — mantém distância, atira projéteis
+               → Se não acerta por 5s: reposiciona (_noHitTimer)
+               → ShootProjectile() → Instantiate EnemyProjectile
+```
+
+**Fluxo de código — Projétil:**
+
+```
+EnemyController.ShootProjectile()
+  → dir = (player.position - transform.position).normalized
+  → Instantiate(_projectilePrefab)
+  → ep.Initialize(dir, _damageToPlayer, this)
+        ↓
+EnemyProjectile.Initialize()
+  → _rb.linearVelocity = dir * _speed
+  → Destroy(gameObject, _lifetime) — auto-destroy após 3s
+        ↓
+EnemyProjectile.OnTriggerEnter2D(other)
+  → Ignora layer Enemy (bitwise check)
+  → IDamageable.TakeDamage(_damage)
+  → _owner.OnProjectileHit() — reseta _noHitTimer
+  → Destroy(gameObject)
+```
+
+---
+
+### 15.2 Arquivos Criados
+
+| Arquivo | Tipo | Função |
+|---------|------|--------|
+| `Assets/Scripts/Enemies/EnemyType.cs` | Enum | `Melee`, `Fast`, `Heavy`, `Ranged` |
+| `Assets/Scripts/Enemies/EnemyBase.cs` | Classe base | TakeDamage, OnDeath, Drop de runas, HP, ApplyDifficulty |
+| `Assets/Scripts/Enemies/EnemyProjectile.cs` | MonoBehaviour | Projétil com Rigidbody2D velocity, ignora Enemy layer |
+| `Assets/Scripts/Bosses/IBoss.cs` | Interface | `void Initialize(Transform player)` |
+| `Assets/Scripts/Bosses/BossMeleeController.cs` | MonoBehaviour | Boss 1 — combos melee, enrage em 30% HP |
+| `Assets/Scripts/Bosses/BossAreaController.cs` | MonoBehaviour | Boss 2 — danger zones, projéteis cadentes |
+| `Assets/Scripts/Bosses/BossHybridController.cs` | MonoBehaviour | Boss 3 — alternância melee/ranged |
+| `Assets/Scripts/Bosses/DangerZone.cs` | MonoBehaviour | Zona de dano por tick, auto-destroy |
+
+---
+
+### 15.3 Arquivos Modificados
+
+| Arquivo | Mudanças |
+|---------|----------|
+| `Assets/Scripts/Enemies/EnemyController.cs` | Herda `EnemyBase`. Métodos isolados por tipo. LayerMask serializado `_playerLayer`. |
+| `Assets/Scripts/Rooms/RoomController.cs` | Novo: `_enemyPrefabs[]`, `SetEnemyPrefabs()`, layer check padronizado. |
+| `Assets/Scripts/Dungeon/DungeonGenerator.cs` | Novo: `_enemyFastPrefab`, `_enemyHeavyPrefab`, `_enemyRangedPrefab`, `GetEnemyPrefabsForFloor()`. |
+| `Assets/Scripts/Dungeon/BossFloorHandler.cs` | Novo: `_bossPrefabs[]`, usa `IBoss.Initialize()`, suporte a array de bosses. |
+
+---
+
+### 15.4 Layer EnemyProjectile
+
+#### 15.4.1 Criar a layer
+
+1. No Unity: **Edit → Project Settings**
+2. Na janela, clicar na aba **Tags and Layers**
+3. Expandir **Layers** (não Tags)
+4. Procurar o primeiro campo vazio após as layers existentes (provavelmente no índice 12)
+5. Digitar: **`EnemyProjectile`**
+6. Pressionar Enter para confirmar
+
+> A layer EnemyProjectile é usada para que o projétil não colida com outros inimigos.
+
+#### 15.4.2 Configurar Collision Matrix
+
+1. No Unity: **Edit → Project Settings**
+2. Na janela, clicar na aba **Physics 2D**
+3. Na parte inferior, existe a **Layer Collision Matrix** — uma tabela de checkboxes
+4. Encontrar a linha/coluna **EnemyProjectile** (deve aparecer após criar a layer)
+5. Configurar os checkboxes:
+
+| | Player | Enemy | PlayerAttack | Ground | EnemyProjectile | Default |
+|-|--------|-------|--------------|--------|-----------------|---------|
+| EnemyProjectile | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
+
+6. Marcar **apenas** Player e Ground — desmarcar todos os outros
+7. Isso garante que o projétil:
+   - Colide com o Player (causa dano)
+   - Colide com o Ground (é destruído)
+   - Não colide com outros inimigos
+   - Não colide com outros projéteis
+
+---
+
+### 15.5 Prefab: EnemyProjectile
+
+Este é o projétil que inimigos Ranged e bosses atiram.
+
+#### 15.5.1 Criar o GameObject
+
+1. Na **Hierarchy** de qualquer cena aberta (pode ser a cena Main)
+2. Clique direito → **Create Empty**
+3. Renomear para **"EnemyProjectile"**
+
+#### 15.5.2 Adicionar SpriteRenderer
+
+1. Selecionar o EnemyProjectile na Hierarchy
+2. No Inspector: **Add Component → SpriteRenderer**
+3. Configurar:
+
+| Campo | Valor | Nota |
+|-------|-------|------|
+| Sprite | Qualquer sprite pequeno (um quadrado, ou usar sprite de partícula do SunnyLand) | Placeholder — pode ser um círculo simples |
+| Color | **R: 1, G: 0, B: 0, A: 1** (vermelho puro) | Cor vermelha para diferenciar do player |
+| Sorting Layer | Default | |
+| Order in Layer | **2** | Aparece acima dos inimigos e do player |
+
+> O sprite pode ser qualquer placeholder. O importante é a cor vermelha para o player identificar o projétil.
+
+#### 15.5.3 Adicionar Rigidbody2D
+
+1. **Add Component → Rigidbody2D**
+2. Configurar:
+
+| Campo | Valor | Por quê |
+|-------|-------|---------|
+| Body Type | Dynamic | Necessário para OnTriggerEnter2D funcionar |
+| Gravity Scale | **0** | Projétil voa em linha reta, sem cair |
+| Freeze Rotation Z | **✓** | Evita que o projétil gire |
+| Collision Detection | Continuous | Evita tunelamento em paredes finas |
+
+> **Gravity Scale = 0 é essencial.** Sem isso, o projétil cai em arco no chão em vez de ir em linha reta.
+
+#### 15.5.4 Adicionar CircleCollider2D
+
+1. **Add Component → CircleCollider2D**
+2. Configurar:
+
+| Campo | Valor |
+|-------|-------|
+| Is Trigger | **true** (marcar) |
+| Radius | **0.15** |
+
+> `Is Trigger = true` é obrigatório. Sem isso, o projétil colide fisicamente com tudo em vez de detectar via `OnTriggerEnter2D`.
+
+#### 15.5.5 Adicionar EnemyProjectile.cs
+
+1. **Add Component → EnemyProjectile**
+2. O componente aparece com 4 campos:
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| _speed | **6** | Velocidade do projétil em unidades/segundo |
+| _damage | **8** | Dano causado ao player ao contato |
+| _lifetime | **3** | Segundos até auto-destruir (evita projéteis infinitos) |
+| _enemyLayer | **Enemy** | Layer para ignorar — projétil não acerta outros inimigos |
+
+> `_enemyLayer` deve ser setado como a layer **Enemy**. Clique no dropdown e selecione "Enemy". Isso faz o bitwise check no `OnTriggerEnter2D` ignorar colisões com inimigos.
+
+#### 15.5.6 Configurar a Layer
+
+1. Na parte superior do Inspector (ao lado do nome do GameObject)
+2. No dropdown **Layer**, selecionar: **EnemyProjectile** (a layer que criamos no passo 15.4)
+3. Quando perguntar "Do you want to set the layer for all child objects?", clicar em **"This object only"**
+
+#### 15.5.7 Converter em Prefab
+
+1. No **Project window**, navegar até `Assets/Prefabs/`
+2. **Arrastar** o GameObject "EnemyProjectile" da Hierarchy para a pasta `Assets/Prefabs/`
+3. O Unity pergunta se quer criar um Prefab — confirmar
+4. O prefab `EnemyProjectile.prefab` aparece na pasta
+5. **Deletar** o EnemyProjectile da Hierarchy — ele só existe como prefab agora
+
+#### 15.5.8 Hierarquia do Prefab
+
+```
+EnemyProjectile (prefab)
+├── SpriteRenderer (sprite placeholder, vermelho, Order +2)
+├── Rigidbody2D (Gravity 0, Freeze Rotation Z ✓)
+├── CircleCollider2D (Is Trigger = true, Radius 0.15)
+└── EnemyProjectile.cs (_speed=6, _damage=8, _lifetime=3, _enemyLayer=Enemy)
+```
+
+**Layer: EnemyProjectile**
+
+---
+
+### 15.6 Prefab: DangerZone
+
+Esta é a zona de perigo que o Boss 2 cria no chão. Ela causa dano por tick ao player que fica em cima.
+
+#### 15.6.1 Criar o GameObject
+
+1. Na **Hierarchy**, clicar direito → **Create Empty**
+2. Renomear para **"DangerZone"**
+
+#### 15.6.2 Adicionar SpriteRenderer
+
+1. **Add Component → SpriteRenderer**
+2. Configurar:
+
+| Campo | Valor | Nota |
+|-------|-------|------|
+| Sprite | Quadrado simples ou sprite de tile do SunnyLand | Placeholder — será o visual da zona |
+| Color | **R: 1, G: 0, B: 0, A: 0.4** | Vermelho semi-transparente — indica área de perigo |
+| Sorting Layer | Default | |
+| Order in Layer | **-1** | Atrás do chão ou na mesma camada — não deve cobrir inimigos |
+
+> O alpha 0.4 deixa o sprite semi-transparente. O player consegue ver o chão através da zona.
+
+#### 15.6.3 Ajustar o Transform
+
+1. No Inspector, na seção **Transform**:
+2. Alterar **Scale** para:
+
+| Campo | Valor |
+|-------|-------|
+| Scale X | **2** |
+| Scale Y | **2** |
+
+> Isso faz o sprite cobrir uma área de 2×2 unidades — bom para uma danger zone.
+
+#### 15.6.4 Adicionar BoxCollider2D
+
+1. **Add Component → BoxCollider2D**
+2. Configurar:
+
+| Campo | Valor |
+|-------|-------|
+| Is Trigger | **true** (marcar) |
+| Size X | **2** |
+| Size Y | **2** |
+
+> O collider deve ter o mesmo tamanho do sprite. `Is Trigger = true` é obrigatório para detectar o player via `OnTriggerEnter2D`/`OnTriggerStay2D`.
+
+#### 15.6.5 Adicionar DangerZone.cs
+
+1. **Add Component → DangerZone**
+2. O componente aparece com 3 campos:
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| _damagePerTick | **5** | Dano causado a cada tick quando o player está na zona |
+| _tickInterval | **0.5** | Segundos entre cada tick de dano |
+| _duration | **4** | Segundos até a zona se auto-destruir (será sobrescrito pelo Initialize) |
+
+> O campo `_duration` no Inspector é o default. O `BossAreaController` chama `Initialize(duration)` que sobrescreve esse valor.
+
+#### 15.6.6 Converter em Prefab
+
+1. Arrastar da Hierarchy para `Assets/Prefabs/`
+2. Deletar da cena
+
+#### 15.6.7 Hierarquia do Prefab
+
+```
+DangerZone (prefab)
+├── SpriteRenderer (quadrado, vermelho transparente A:0.4, Scale 2x2)
+├── BoxCollider2D (Is Trigger = true, Size 2x2)
+└── DangerZone.cs (_damagePerTick=5, _tickInterval=0.5, _duration=4)
+```
+
+**Layer: Default**
+
+---
+
+### 15.7 Prefab: EnemyFast
+
+O inimigo rápido persegue o player sem pausas. É fraco mas veloz.
+
+#### 15.7.1 Duplicar o Enemy.prefab
+
+1. No **Project window**, navegar até `Assets/Prefabs/`
+2. Clicar no **Enemy.prefab**
+3. **Ctrl+D** para duplicar
+4. Renomear a cópia para **"EnemyFast"**
+
+#### 15.7.2 Configurar EnemyController
+
+1. **Duplo clique** no EnemyFast.prefab para abrir no Prefab Editor
+2. Selecionar o objeto raiz "EnemyFast"
+3. No componente **EnemyController**, preencher:
+
+**Seção Movement Settings:**
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| _moveSpeed | **5** | 2.5x mais rápido que Melee (que é 2) |
+
+**Seção Enemy Type:**
+
+| Campo | Valor |
+|-------|-------|
+| _enemyType | **Fast** (selecionar no dropdown) |
+
+**Seção Combat Settings (herdados de EnemyBase):**
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| _maxHealth | **15** | Metade do Melee (30) — frágil |
+| _damageToPlayer | **8** | Um pouco menos que Melee (10) |
+| _attackCooldown | **0.6** | Ataca mais rápido que Melee (1) |
+| _knockbackForce | **3** | Menor knockback que Melee (5) |
+
+**Seção Jump Settings:**
+
+| Campo | Valor | Nota |
+|-------|-------|------|
+| _jumpForce | **8** | Manter padrão — Fast não usa muito |
+| _groundCheck | arrastar GroundCheck | Já vem do prefab original |
+| _groundCheckRadius | **0.15** | Manter padrão |
+| _groundLayer | **Ground** | Já vem do prefab original |
+
+**Seção References:**
+
+| Campo | Valor | Nota |
+|-------|-------|------|
+| _player | deixar vazio | RoomController seta via Initialize |
+| _playerLayer | **Player** | Clique no dropdown, marcar "Player" |
+
+> `_playerLayer` é o campo novo substituindo o `NameToLayer`. Clique no dropdown e marque a checkbox da layer **Player**.
+
+#### 15.7.3 Aparência Visual
+
+1. Na Hierarchy do Prefab Editor, selecionar o objeto raiz
+2. No componente **SpriteRenderer**:
+
+| Campo | Valor |
+|-------|-------|
+| Color | **R: 0, G: 1, B: 1, A: 1** (ciano/azul claro) |
+
+3. No **Transform**:
+
+| Campo | Valor |
+|-------|-------|
+| Scale X | **0.8** |
+| Scale Y | **0.8** |
+| Scale Z | **1** |
+
+> Menor que o Melee (que usa Scale 1). Cor ciano para diferenciar.
+
+#### 15.7.4 Salvar e Sair
+
+1. **Ctrl+S** para salvar o prefab
+2. Clicar a seta **"Back"** no canto superior esquerdo da Hierarchy para sair do Prefab Editor
+
+---
+
+### 15.8 Prefab: EnemyHeavy
+
+O inimigo pesado é lento, forte e faz charge.
+
+#### 15.8.1 Duplicar o Enemy.prefab
+
+1. Em `Assets/Prefabs/`: selecionar **Enemy.prefab**
+2. **Ctrl+D** → renomear para **"EnemyHeavy"**
+
+#### 15.8.2 Configurar EnemyController
+
+1. Abrir o prefab no Prefab Editor
+2. No componente **EnemyController**:
+
+**Seção Movement Settings:**
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| _moveSpeed | **1** | 2x mais lento que Melee |
+
+**Seção Enemy Type:**
+
+| Campo | Valor |
+|-------|-------|
+| _enemyType | **Heavy** |
+
+**Seção Heavy Settings** (nova seção visível quando o script recompilou):
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| _chargeSpeed | **8** | Velocidade da investida — bem rápida |
+| _chargeCooldown | **3** | Segundos entre charges |
+
+**Seção Combat Settings (EnemyBase):**
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| _maxHealth | **90** | 3x o Melee — tanque |
+| _damageToPlayer | **20** | 2x o Melee — dói muito |
+| _attackCooldown | **1.5** | Mais lento para atacar |
+| _knockbackForce | **10** | 2x o Melee — empurra forte |
+
+**Seção References:**
+
+| Campo | Valor |
+|-------|-------|
+| _player | deixar vazio |
+| _playerLayer | **Player** |
+
+#### 15.8.3 Aparência Visual
+
+| Campo | Valor |
+|-------|-------|
+| SpriteRenderer Color | **R: 1, G: 0.5, B: 0, A: 1** (laranja) |
+| Scale X | **1.5** |
+| Scale Y | **1.5** |
+| Scale Z | **1** |
+
+> Maior que o Melee. Cor laranja para indicar perigo.
+
+#### 15.8.4 Salvar e Sair
+
+Ctrl+S → Back.
+
+---
+
+### 15.9 Prefab: EnemyRanged
+
+O inimigo ranged mantém distância e atira projéteis.
+
+#### 15.9.1 Duplicar o Enemy.prefab
+
+1. Em `Assets/Prefabs/`: selecionar **Enemy.prefab**
+2. **Ctrl+D** → renomear para **"EnemyRanged"**
+
+#### 15.9.2 Configurar EnemyController
+
+1. Abrir o prefab no Prefab Editor
+2. No componente **EnemyController**:
+
+**Seção Movement Settings:**
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| _moveSpeed | **1.5** | Lento — não precisa correr |
+
+**Seção Enemy Type:**
+
+| Campo | Valor |
+|-------|-------|
+| _enemyType | **Ranged** |
+
+**Seção Ranged Settings** (nova seção):
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| _preferredDistance | **5** | Distância ideal do player em unidades |
+| _shootCooldown | **1.5** | Segundos entre tiros |
+| _projectilePrefab | **EnemyProjectile.prefab** | Arrastar de Assets/Prefabs/ |
+
+> **`_projectilePrefab` é o campo mais importante.** Sem essa conexão, o ranged não atira. Arraste o prefab EnemyProjectile que criamos no passo 15.5.
+
+**Seção Combat Settings (EnemyBase):**
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| _maxHealth | **20** | Frágil — prioridade para o player matar |
+| _damageToPlayer | **5** | Dano baixo de contato |
+| _attackCooldown | **2** | Contato é pouco frequente |
+| _knockbackForce | **2** | Knockback mínimo |
+
+**Seção References:**
+
+| Campo | Valor |
+|-------|-------|
+| _player | deixar vazio |
+| _playerLayer | **Player** |
+
+#### 15.9.3 Aparência Visual
+
+| Campo | Valor |
+|-------|-------|
+| SpriteRenderer Color | **R: 0.5, G: 0, B: 0.8, A: 1** (roxo) |
+| Scale X | **0.9** |
+| Scale Y | **0.9** |
+| Scale Z | **1** |
+
+> Um pouco menor que o Melee. Cor roxo para diferenciar.
+
+#### 15.9.4 Salvar e Sair
+
+Ctrl+S → Back.
+
+#### 15.9.5 Hierarquia do Prefab
+
+```
+EnemyRanged (prefab)
+├── SpriteRenderer (sprite, roxo, Scale 0.9)
+├── Rigidbody2D (Gravity 3, Freeze Rotation Z)
+├── CircleCollider2D (trigger, Is Trigger = true)
+├── CircleCollider2D (physics, Is Trigger = false)
+├── EnemyController.cs
+│   ├── _enemyType = Ranged
+│   ├── _moveSpeed = 1.5
+│   ├── _preferredDistance = 5
+│   ├── _shootCooldown = 1.5
+│   ├── _projectilePrefab = EnemyProjectile.prefab  ← IMPORTANTE
+│   ├── _maxHealth = 20
+│   └── _playerLayer = Player
+└── GroundCheck (Empty child, nos pés)
+```
+
+---
+
+### 15.10 Atualizar Enemy.prefab Existente
+
+O prefab `Enemy.prefab` já existe e precisa ser atualizado com os novos campos que foram adicionados ao script `EnemyController` (que agora herda de `EnemyBase`).
+
+#### 15.10.1 Abrir o Prefab
+
+1. No **Project window**, navegar até `Assets/Prefabs/`
+2. **Duplo clique** no `Enemy.prefab` — abre o Prefab Editor
+3. Selecionar o objeto raiz "Enemy"
+
+#### 15.10.2 Verificar os Novos Campos
+
+O Unity já preenche os campos novos com os valores padrão do script. Verificar:
+
+**Seção Enemy Type** (nova):
+
+| Campo | Valor esperado |
+|-------|---------------|
+| _enemyType | Melee (default) |
+
+**Seção Ranged Settings** (nova):
+
+| Campo | Valor esperado |
+|-------|---------------|
+| _preferredDistance | 5 |
+| _shootCooldown | 1.5 |
+| _projectilePrefab | vazio (null) |
+
+**Seção Heavy Settings** (nova):
+
+| Campo | Valor esperado |
+|-------|---------------|
+| _chargeSpeed | 8 |
+| _chargeCooldown | 3 |
+
+**Seção References:**
+
+| Campo | O que fazer |
+|-------|------------|
+| _player | Deixar vazio (RoomController seta) |
+| _playerLayer | **Marcar como "Player"** — clicar no dropdown e marcar a checkbox |
+
+> **`_playerLayer` é essencial.** Sem essa configuração, o layer check em `OnTriggerEnter2D` não detecta o player e o inimigo não causa dano por contato.
+
+#### 15.10.3 Verificar EnemyBase Fields
+
+Os campos de EnemyBase (que eram do EnemyController antigo) devem estar com os mesmos valores de antes:
+
+| Campo | Valor |
+|-------|-------|
+| _maxHealth | 30 |
+| _damageToPlayer | 10 |
+| _attackCooldown | 1 |
+| _knockbackForce | 5 |
+| _isElite | false |
+| _runeValue | 1 |
+
+#### 15.10.4 Salvar e Sair
+
+Ctrl+S → Back.
+
+---
+
+### 15.11 Atualizar EliteEnemy.prefab
+
+Se existe um prefab `EliteEnemy.prefab`, ele precisa ser atualizado.
+
+#### 15.11.1 Abrir o Prefab
+
+1. Em `Assets/Prefabs/`: **duplo clique** no EliteEnemy.prefab
+
+#### 15.11.2 Configurar
+
+| Campo | O que fazer |
+|-------|------------|
+| _enemyType | **Melee** |
+| _isElite | **true** (marcar) |
+| _playerLayer | **Player** |
+
+#### 15.11.3 Salvar e Sair
+
+Ctrl+S → Back.
+
+---
+
+### 15.12 Prefab: Boss1 (Boss Melee)
+
+Este é o boss do andar 5. Ele ataca em combos de 3 hits e fica enraged quando o HP cai abaixo de 30%.
+
+#### 15.12.1 Criar o GameObject
+
+1. Na **Hierarchy**, clicar direito → **Create Empty**
+2. Renomear para **"Boss1"**
+
+#### 15.12.2 Adicionar SpriteRenderer
+
+1. **Add Component → SpriteRenderer**
+2. Configurar:
+
+| Campo | Valor |
+|-------|-------|
+| Sprite | Placeholder (sprite de inimigo grande, ou o mesmo do Enemy) |
+| Color | **R: 0.8, G: 0.2, B: 0.2, A: 1** (vermelho escuro) |
+| Sorting Layer | Default |
+| Order in Layer | 0 |
+
+#### 15.12.3 Ajustar o Transform
+
+| Campo | Valor |
+|-------|-------|
+| Scale X | **2.5** |
+| Scale Y | **2.5** |
+| Scale Z | **1** |
+
+> Boss é 2.5x maior que um inimigo normal.
+
+#### 15.12.4 Adicionar Rigidbody2D
+
+1. **Add Component → Rigidbody2D**
+2. Configurar:
+
+| Campo | Valor |
+|-------|-------|
+| Body Type | Dynamic |
+| Gravity Scale | **3** |
+| Freeze Rotation Z | **✓** |
+
+#### 15.12.5 Adicionar Colliders
+
+O boss precisa de **dois** CircleCollider2D:
+
+**Collider 1 — Trigger (para detectar contato com player):**
+
+1. **Add Component → CircleCollider2D**
+2. Configurar:
+
+| Campo | Valor |
+|-------|-------|
+| Is Trigger | **true** |
+| Radius | **1.2** |
+
+> Ajustar o radius para cobrir o sprite do boss.
+
+**Collider 2 — Physics (para colidir com o chão):**
+
+1. **Add Component → CircleCollider2D** (sim, adicionar um segundo)
+2. Configurar:
+
+| Campo | Valor |
+|-------|-------|
+| Is Trigger | **false** |
+| Radius | **1.2** |
+
+> Sem o collider físico, o boss cai através do chão. Sem o collider trigger, o boss não detecta contato com o player.
+
+#### 15.12.6 Adicionar BossMeleeController.cs
+
+1. **Add Component → BossMeleeController**
+2. Preencher os campos:
+
+**Seção Health (EnemyBase):**
+
+| Campo | Valor |
+|-------|-------|
+| _maxHealth | **150** |
+| _runeValue | **5** |
+
+**Seção Combat (EnemyBase):**
+
+| Campo | Valor |
+|-------|-------|
+| _damageToPlayer | **15** |
+| _attackCooldown | **1** |
+| _knockbackForce | **8** |
+
+**Seção Boss Movement:**
+
+| Campo | Valor |
+|-------|-------|
+| _moveSpeed | **3** |
+
+**Seção Attack Pattern:**
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| _attackComboCount | **3** | 3 hits por combo |
+| _attackInterval | **0.4** | 0.4s entre cada hit do combo |
+| _comboCooldown | **1.5** | 1.5s de espera entre combos |
+| _attackRange | **1.5** | Alcance do ataque em unidades |
+
+**Seção Jump:**
+
+| Campo | Valor | Nota |
+|-------|-------|------|
+| _jumpForce | **8** | |
+| _groundCheck | arrastar o filho GroundCheck | Criar no próximo passo |
+| _groundCheckRadius | **0.15** | |
+| _groundLayer | **Ground** | Marcar no dropdown |
+
+**Seção References:**
+
+| Campo | Valor |
+|-------|-------|
+| _playerLayer | **Player** |
+
+#### 15.12.7 Criar GroundCheck
+
+1. Na Hierarchy do Prefab Editor (ou na cena), clicar direito no **Boss1** → **Create Empty**
+2. Renomear para **"GroundCheck"**
+3. No **Transform**, ajustar a posição local:
+
+| Campo | Valor |
+|-------|-------|
+| Pos X | **0** |
+| Pos Y | **-0.8** |
+| Pos Z | **0** |
+
+> Pos Y = -0.8 posiciona o ground check nos pés do boss (que tem scale 2.5).
+
+4. Voltar ao objeto raiz **Boss1**
+5. No componente **BossMeleeController**, arrastar o **GroundCheck** para o campo `_groundCheck`
+
+#### 15.12.8 Configurar a Layer
+
+1. Selecionar o objeto raiz **Boss1**
+2. No dropdown **Layer** (topo do Inspector): selecionar **Enemy**
+3. Quando perguntar, clicar **"This object only"**
+
+#### 15.12.9 Converter em Prefab
+
+1. Arrastar da Hierarchy para `Assets/Prefabs/`
+2. Deletar da cena
+
+#### 15.12.10 Hierarquia do Prefab
+
+```
+Boss1 (prefab, Layer = Enemy)
+├── SpriteRenderer (vermelho escuro, Scale 2.5)
+├── Rigidbody2D (Gravity 3, Freeze Rotation Z)
+├── CircleCollider2D (trigger, Is Trigger = true, Radius 1.2)
+├── CircleCollider2D (physics, Is Trigger = false, Radius 1.2)
+├── BossMeleeController.cs
+│   ├── _maxHealth = 150
+│   ├── _damageToPlayer = 15
+│   ├── _moveSpeed = 3
+│   ├── _attackComboCount = 3
+│   ├── _attackRange = 1.5
+│   ├── _groundCheck = GroundCheck
+│   ├── _groundLayer = Ground
+│   └── _playerLayer = Player
+└── GroundCheck (Empty, pos Y = -0.8)
+```
+
+---
+
+### 15.13 Prefab: Boss2 (Boss Area) 
+
+Este é o boss do andar 10. Ele cria danger zones no chão e projéteis caem do céu.
+
+#### 15.13.1 Criar o GameObject
+
+1. **Create Empty** → renomear **"Boss2"**
+
+#### 15.13.2 Adicionar Componentes Base
+
+Mesmo padrão do Boss1:
+
+| Componente | Configuração |
+|-----------|-------------|
+| SpriteRenderer | Placeholder **azul** (R:0.2, G:0.3, B:0.8), Scale **2.5** |
+| Rigidbody2D | Gravity 3, Freeze Rotation Z ✓ |
+| CircleCollider2D (trigger) | Is Trigger = true, Radius 1.2 |
+| CircleCollider2D (physics) | Is Trigger = false, Radius 1.2 |
+| Layer | **Enemy** |
+
+#### 15.13.3 Adicionar BossAreaController.cs
+
+1. **Add Component → BossAreaController**
+2. Preencher:
+
+**Seção Health (EnemyBase):**
+
+| Campo | Valor |
+|-------|-------|
+| _maxHealth | **200** |
+| _runeValue | **8** |
+
+**Seção Combat (EnemyBase):**
+
+| Campo | Valor |
+|-------|-------|
+| _damageToPlayer | **10** |
+| _attackCooldown | **1** |
+| _knockbackForce | **5** |
+
+**Seção Boss Movement:**
+
+| Campo | Valor |
+|-------|-------|
+| _moveSpeed | **1.5** |
+
+**Seção Danger Zones:**
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| _dangerZonePrefab | **DangerZone.prefab** | Arrastar de Assets/Prefabs/ |
+| _attackInterval | **2** | Segundos entre cada danger zone |
+| _dangerZoneDuration | **4** | Segundos que cada zona dura |
+| _dangerZoneRadius | **3** | Raio do offset aleatório na fase 2 |
+| _maxDangerZones | **5** | Máximo de zonas simultâneas |
+
+> **`_dangerZonePrefab` é essencial.** Sem essa conexão, o boss não spawna zonas.
+
+**Seção Projectiles:**
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| _projectilePrefab | **EnemyProjectile.prefab** | Arrastar de Assets/Prefabs/ |
+| _fallingProjectileInterval | **3** | Segundos entre projéteis cadentes |
+
+> Os projéteis caem de cima do player (posição Y + 8). O `_projectilePrefab` é o mesmo usado pelo EnemyRanged.
+
+**Seção References:**
+
+| Campo | Valor |
+|-------|-------|
+| _playerLayer | **Player** |
+
+> Boss2 NÃO precisa de GroundCheck — não pula nem verifica chão.
+
+#### 15.13.4 Converter em Prefab
+
+Arrastar para `Assets/Prefabs/`, deletar da cena.
+
+#### 15.13.5 Hierarquia do Prefab
+
+```
+Boss2 (prefab, Layer = Enemy)
+├── SpriteRenderer (azul, Scale 2.5)
+├── Rigidbody2D (Gravity 3, Freeze Rotation Z)
+├── CircleCollider2D (trigger, Is Trigger = true)
+├── CircleCollider2D (physics, Is Trigger = false)
+└── BossAreaController.cs
+    ├── _maxHealth = 200
+    ├── _dangerZonePrefab = DangerZone.prefab
+    ├── _maxDangerZones = 5
+    ├── _projectilePrefab = EnemyProjectile.prefab
+    └── _playerLayer = Player
+```
+
+---
+
+### 15.14 Prefab: Boss3 (Boss Híbrido)
+
+Este é o boss do andar 15. Fase 1: melee. Fase 2 (50% HP): ranged com spread de 3 projéteis.
+
+#### 15.14.1 Criar o GameObject
+
+1. **Create Empty** → renomear **"Boss3"**
+
+#### 15.14.2 Adicionar Componentes Base
+
+| Componente | Configuração |
+|-----------|-------------|
+| SpriteRenderer | Placeholder **verde** (R:0.2, G:0.7, B:0.3), Scale **2.5** |
+| Rigidbody2D | Gravity 3, Freeze Rotation Z ✓ |
+| CircleCollider2D (trigger) | Is Trigger = true, Radius 1.2 |
+| CircleCollider2D (physics) | Is Trigger = false, Radius 1.2 |
+| Layer | **Enemy** |
+
+#### 15.14.3 Adicionar BossHybridController.cs
+
+1. **Add Component → BossHybridController**
+2. Preencher:
+
+**Seção Health (EnemyBase):**
+
+| Campo | Valor |
+|-------|-------|
+| _maxHealth | **180** |
+| _runeValue | **7** |
+
+**Seção Combat (EnemyBase):**
+
+| Campo | Valor |
+|-------|-------|
+| _damageToPlayer | **12** |
+| _attackCooldown | **1** |
+| _knockbackForce | **6** |
+
+**Seção Boss Movement:**
+
+| Campo | Valor |
+|-------|-------|
+| _moveSpeed | **2.5** |
+
+**Seção Phase Settings:**
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| _phaseTwoHPPercent | **0.5** | Muda para ranged quando HP < 50% |
+
+**Seção Melee:**
+
+| Campo | Valor |
+|-------|-------|
+| _meleeAttackCooldown | **0.8** |
+| _meleeRange | **1.5** |
+
+**Seção Ranged:**
+
+| Campo | Valor | Explicação |
+|-------|-------|------------|
+| _projectilePrefab | **EnemyProjectile.prefab** | Arrastar de Assets/Prefabs/ |
+| _shootCooldown | **1.2** |
+| _preferredDistance | **6** |
+| _spreadAngle | **15** | Ângulo entre os 3 projéteis em graus |
+
+> Na fase 2, o boss atira 3 projéteis: um reto e dois nos ângulos ±15°.
+
+**Seção Jump:**
+
+| Campo | Valor |
+|-------|-------|
+| _jumpForce | **8** |
+| _groundCheck | arrastar GroundCheck |
+| _groundCheckRadius | **0.15** |
+| _groundLayer | **Ground** |
+
+**Seção References:**
+
+| Campo | Valor |
+|-------|-------|
+| _playerLayer | **Player** |
+
+#### 15.14.4 Criar GroundCheck
+
+Mesmo que Boss1: criar Empty "GroundCheck" como filho, pos Y = -0.8, arrastar no `_groundCheck`.
+
+#### 15.14.5 Converter em Prefab
+
+Arrastar para `Assets/Prefabs/`, deletar da cena.
+
+#### 15.14.6 Hierarquia do Prefab
+
+```
+Boss3 (prefab, Layer = Enemy)
+├── SpriteRenderer (verde, Scale 2.5)
+├── Rigidbody2D (Gravity 3, Freeze Rotation Z)
+├── CircleCollider2D (trigger, Is Trigger = true)
+├── CircleCollider2D (physics, Is Trigger = false)
+├── BossHybridController.cs
+│   ├── _maxHealth = 180
+│   ├── _phaseTwoHPPercent = 0.5
+│   ├── _meleeRange = 1.5
+│   ├── _projectilePrefab = EnemyProjectile.prefab
+│   ├── _preferredDistance = 6
+│   ├── _spreadAngle = 15
+│   ├── _groundCheck = GroundCheck
+│   ├── _groundLayer = Ground
+│   └── _playerLayer = Player
+└── GroundCheck (Empty, pos Y = -0.8)
+```
+
+### 15.15 Atualizar BossArena Prefabs
+
+Os prefabs de arena de boss (`BossArena_5`, `BossArena_10`, `BossArena_15`) criados na Fase 7 precisam ser atualizados para usar os novos bosses.
+
+#### 15.15.1 Atualizar BossArena_5 -- parei aqui
+
+1. No **Project window**, navegar até `Assets/Prefabs/`
+2. **Duplo clique** no prefab **BossArena_5** para abrir no Prefab Editor
+3. Selecionar o objeto raiz "BossArena_5"
+4. Procurar o componente **BossFloorHandler** no Inspector
+5. Expandir a seção **Boss Settings**
+
+**Configurar _bossPrefabs:**
+
+1. No campo `_bossPrefabs`, clicar na seta para expandir
+2. Alterar **Size** para **1**
+3. No **Element 0**, arrastar o prefab **Boss1.prefab** de `Assets/Prefabs/`
+
+**Verificar _bossSpawnPoint:**
+
+1. Deve estar conectado ao filho **BossSpawnPoint** da arena
+2. Se estiver vazio, arrastar o filho BossSpawnPoint da Hierarchy do Prefab Editor
+
+**Verificar _roomController:**
+
+1. Deve estar conectado ao componente RoomController do próprio BossArena_5
+2. Se estiver vazio: clicar no círculo do campo → selecionar "BossArena_5" → selecionar o componente "RoomController"
+
+> O campo `_bossPrefab` (singular) pode ser deixado vazio. O sistema agora usa `_bossPrefabs[]` para selecionar o boss correto por andar.
+
+6. **Ctrl+S** → salvar
+7. **Back** → sair do Prefab Editor
+
+#### 15.15.2 Atualizar BossArena_10
+
+1. **Duplo clique** no prefab **BossArena_10**
+2. Selecionar raiz → componente **BossFloorHandler**
+3. `_bossPrefabs`: Size = 1, Element 0 = **Boss2.prefab**
+4. `_bossSpawnPoint`: verificar conexão
+5. Salvar e sair
+
+#### 15.15.3 Atualizar BossArena_15
+
+1. **Duplo clique** no prefab **BossArena_15**
+2. Selecionar raiz → componente **BossFloorHandler**
+3. `_bossPrefabs`: Size = 1, Element 0 = **Boss3.prefab**
+4. `_bossSpawnPoint`: verificar conexão
+5. Salvar e sair
+
+**Resumo:**
+
+| Arena | _bossPrefabs[0] | Andar |
+|-------|-----------------|-------|
+| BossArena_5 | Boss1.prefab | 5 |
+| BossArena_10 | Boss2.prefab | 10 |
+| BossArena_15 | Boss3.prefab | 15 |
+
+---
+
+### 15.16 Atualizar Cena Main — DungeonGenerator
+
+O `DungeonGenerator` na cena Main precisa dos novos prefabs de inimigo para funcionar a distribuição por andar.
+
+#### 15.16.1 Abrir a Cena
+
+1. No **Project window**, navegar até `Assets/Scenes/`
+2. **Duplo clique** em **Main.unity** para abrir
+
+#### 15.16.2 Selecionar o DungeonGenerator
+
+1. Na **Hierarchy**, procurar o objeto **DungeonGenerator**
+2. Clicar nele para selecionar
+
+#### 15.16.3 Configurar os Prefabs de Inimigo
+
+No Inspector, na seção **Enemy Prefabs** (se não existir, o Unity criou automaticamente com o novo header do script):
+
+| Campo | O que fazer | Onde encontrar |
+|-------|-------------|----------------|
+| _enemyPrefab | Já deve estar conectado ao **Enemy.prefab** | Verificar — não mexer |
+| _enemyFastPrefab | Arrastar **EnemyFast.prefab** | `Assets/Prefabs/EnemyFast.prefab` |
+| _enemyHeavyPrefab | Arrastar **EnemyHeavy.prefab** | `Assets/Prefabs/EnemyHeavy.prefab` |
+| _enemyRangedPrefab | Arrastar **EnemyRanged.prefab** | `Assets/Prefabs/EnemyRanged.prefab` |
+
+> `_enemyPrefab` (sem sufixo) é o Melee — provavelmente já está preenchido. Os 3 campos novos (`_enemyFastPrefab`, `_enemyHeavyPrefab`, `_enemyRangedPrefab`) precisam ser preenchidos agora.
+
+#### 15.16.4 Verificar
+
+1. Expandir a seção **Enemy Prefabs** no Inspector
+2. Todos os 4 campos devem ter um prefab conectado (não vazio)
+3. Cada campo mostra o nome do prefab ao lado
+
+#### 15.16.5 Salvar
+
+**Ctrl+S** para salvar a cena.
+
+---
+
+### 15.17 Checklist de Prefabs
+
+Depois de criar tudo, verificar em `Assets/Prefabs/`:
+
+- [ ] `EnemyProjectile.prefab` — Rigidbody2D, CircleCollider2D trigger, EnemyProjectile.cs, Layer EnemyProjectile
+- [ ] `DangerZone.prefab` — BoxCollider2D trigger, DangerZone.cs, sprite vermelho transparente
+- [ ] `EnemyFast.prefab` — EnemyController com _enemyType=Fast, speed 5, HP 15, color ciano
+- [ ] `EnemyHeavy.prefab` — EnemyController com _enemyType=Heavy, charge configurado, color laranja
+- [ ] `EnemyRanged.prefab` — EnemyController com _enemyType=Ranged, _projectilePrefab conectado, color roxo
+- [ ] `Enemy.prefab` atualizado — _enemyType=Melee, _playerLayer configurado como Player
+- [ ] `EliteEnemy.prefab` atualizado — _isElite=true, _playerLayer configurado
+- [ ] `Boss1.prefab` — BossMeleeController, 2 colliders, GroundCheck, Layer Enemy
+- [ ] `Boss2.prefab` — BossAreaController, _dangerZonePrefab e _projectilePrefab conectados, Layer Enemy
+- [ ] `Boss3.prefab` — BossHybridController, _projectilePrefab conectado, GroundCheck, Layer Enemy
+- [ ] `BossArena_5` atualizado — _bossPrefabs[0] = Boss1
+- [ ] `BossArena_10` atualizado — _bossPrefabs[0] = Boss2
+- [ ] `BossArena_15` atualizado — _bossPrefabs[0] = Boss3
+- [ ] Cena Main — DungeonGenerator com _enemyFastPrefab, _enemyHeavyPrefab, _enemyRangedPrefab preenchidos
+
+---
+
+### 15.18 Resumo dos Valores por Tipo
+
+| Campo | Melee | Fast | Heavy | Ranged |
+|-------|-------|------|-------|--------|
+| _maxHealth | 30 | 15 | 90 | 20 |
+| _damageToPlayer | 10 | 8 | 20 | 5 |
+| _moveSpeed | 2 | 5 | 1 | 1.5 |
+| _attackCooldown | 1 | 0.6 | 1.5 | 2 |
+| _knockbackForce | 5 | 3 | 10 | 2 |
+| _projectilePrefab | — | — | — | EnemyProjectile |
+| _chargeSpeed | — | — | 8 | — |
+| Visual (cor) | padrão | ciano | laranja | roxo |
+
+| Boss | HP | Dano | Andar | Padrão de Ataque |
+|------|-----|------|-------|-----------------|
+| Boss 1 (Melee) | 150 | 15 | 5 | Combos 3 hits, enrage 30% HP (fica vermelho, +50% speed, -50% cooldown) |
+| Boss 2 (Area) | 200 | 10 | 10 | Danger zones (max 5), projéteis cadentes, fase 2 (50% HP): zonas extras |
+| Boss 3 (Híbrido) | 180 | 12 | 15 | Fase 1: melee persegue. Fase 2 (50% HP): ranged com spread 3 projéteis ±15° |
+
+---
+
+### 15.19 Como Testar em Play Mode
+
+#### Teste 1 — Inimigo Melee (Comportamento Inalterado)
+
+1. Abrir cena **Main**
+2. Clicar **Play**
+3. Avançar para uma sala de combate no andar 1 ou 2
+4. Verificações:
+   - Inimigos spawneam com o comportamento original
+   - Perseguem o player
+   - Pulam obstáculos quando player está acima
+   - Causam dano por contato
+   - Ao morrer, ficam vermelhos por 0.3s, dropam runa, são destruídos
+   - Player leva knockback ao ser atingido
+
+#### Teste 2 — Inimigo Fast
+
+1. Avançar até andar 3+
+2. Verificações:
+   - Inimigos Fast aparecem (sprite ciano, menor)
+   - São perceptivelmente mais rápidos que Melee
+   - Nunca pausam durante a perseguição
+   - São mais frágeis — morrem mais rápido
+   - Knockback menor que Melee
+
+#### Teste 3 — Inimigo Heavy
+
+1. Avançar até andar 5+
+2. Verificações:
+   - Inimigos Heavy aparecem (sprite laranja, maior)
+   - São lentos no movimento
+   - Quando perto (< 3 unidades), fazem uma charge rápida
+   - Dano por contato é alto (20)
+   - Knockback forte (empurra o player longe)
+   - Têm mais HP (90) — demoram mais para morrer
+
+#### Teste 4 — Inimigo Ranged
+
+1. Avançar até andar 7+
+2. Verificações:
+   - Inimigos Ranged aparecem (sprite roxo, menor)
+   - Mantêm distância do player (~5 unidades)
+   - Param e atiram projéteis vermelhos
+   - Se o player chega perto, recuam
+   - Se erram por 5s+, se reposicionam para atirar de novo
+
+#### Teste 5 — Projétil
+
+1. Colocar um inimigo Ranged na mesma sala que o player
+2. Verificações:
+   - Projétil se move em linha reta em direção ao player
+   - Projétil ignora outros inimigos (passa por eles)
+   - Projétil causa dano ao player ao contato
+   - Projétil é destruído ao encostar no chão/paredes
+   - Projétil é auto-destruído após 3 segundos
+   - Múltiplos projéteis podem existir simultaneamente
+
+#### Teste 6 — Projétil Não Acerta Inimigos
+
+1. Colocar 2 inimigos Ranged + 1 Melee na mesma sala
+2. Ficar parado para tomar projéteis
+3. Verificações:
+   - Projéteis passam pelos outros inimigos sem causar dano
+   - Projéteis só causam dano no player
+
+#### Teste 7 — Elite (Qualquer Tipo)
+
+1. Encontrar uma sala de Elite
+2. Verificações:
+   - Inimigo Elite é maior (Scale 1.3x)
+   - Sprite amarelo
+   - Ranged Elite: atira mais rápido (_shootCooldown × 0.6)
+   - Heavy Elite: knockback maior (_knockbackForce × 1.5)
+   - Fast Elite: mais rápido (_moveSpeed × 1.3)
+   - Dropa 3× runas ao morrer
+
+#### Teste 8 — Boss 1 (Andar 5)
+
+1. Avançar até andar 5 (boss floor)
+2. A arena de boss carrega
+3. Verificações:
+   - Boss spawna no centro da arena
+   - Boss é grande (Scale 2.5), vermelho
+   - Boss persegue o player
+   - Quando perto, ataca em combos de 3 hits com intervalo de 0.4s
+   - Após combo, espera 1.5s antes do próximo
+   - Quando HP cai abaixo de 30%:
+     - Boss fica vermelho vivo
+     - Velocidade aumenta 50%
+     - Cooldown do combo reduz pela metade
+   - Ao matar o boss:
+     - Player recupera vida total
+     - Andar avança para 6
+     - Boss dropa runas (5× valor base × multiplicadores)
+
+#### Teste 9 — Boss 2 (Andar 10)
+
+1. Avançar até andar 10
+2. Verificações:
+   - Boss spawna na arena, sprite azul
+   - Boss cria danger zones vermelhas no chão onde o player está
+   - Danger zones causam dano por tick (5 dano a cada 0.5s)
+   - Danger zones desaparecem após 4 segundos
+   - Máximo 5 danger zones simultâneas (não cria mais que 5)
+   - Projéteis caem do céu periodicamente (a cada 3s)
+   - Quando HP cai abaixo de 50% (fase 2):
+     - Boss fica magenta
+     - Cria danger zone extra com offset aleatório
+
+#### Teste 10 — Boss 3 (Andar 15)
+
+1. Avançar até andar 15
+2. Verificações:
+   - Fase 1 (HP > 50%):
+     - Boss persegue e ataca melee
+     - Usa OverlapCircle para acertar o player
+     - Pula quando player está acima
+   - Fase 2 (HP < 50%):
+     - Boss fica vermelho
+     - Velocidade reduz 30%
+     - Muda para ranged: atira 3 projéteis em spread (±15°)
+     - Mantém distância preferencial de 6 unidades
+     - Se player chega perto, recua
+
+#### Teste 11 — Variedade por Floor
+
+1. Jogar do andar 1 ao 7+ prestando atenção nos tipos de inimigo
+2. Verificações:
+   - Andar 1–2: apenas Melee spawnam
+   - Andar 3–4: Melee + Fast nas salas
+   - Andar 5–6: Melee + Fast + Heavy
+   - Andar 7+: todos os 4 tipos
+   - Melee sempre presente na pool (nunca sala só com ranged)
+
+#### Teste 12 — Múltiplos Ranged na Mesma Sala
+
+1. Encontrar ou forçar uma sala com 3+ inimigos Ranged
+2. Verificações:
+   - Cada ranged atira independentemente
+   - Múltiplos projéteis na tela ao mesmo tempo
+   - Sem lag significativo
+   - Projéteis não colidem entre si (EnemyProjectile layer ignora EnemyProjectile)
+
+#### Teste 13 — Stress Test
+
+1. Usar o DungeonGenerator para gerar uma sala com 10+ inimigos (ajustar _spawnPoints ou forçar)
+2. Verificações:
+   - Sem travamento
+   - Inimigos não ficam presos uns nos outros (Collision Matrix: Enemy↔Enemy = NÃO)
+   - Todos os tipos de inimigo funcionam simultaneamente
+   - Projéteis de ranged funcionam normalmente
+
+---
+
+### 15.20 Troubleshooting
+
+| Problema | Causa provável | Solução |
+|----------|---------------|---------|
+| Novo tipo de inimigo não aparece | Prefabs não conectados no DungeonGenerator | Verificar _enemyFastPrefab, _enemyHeavyPrefab, _enemyRangedPrefab no Inspector do DungeonGenerator |
+| Projétil não se move | Rigidbody2D não existe ou Gravity não é 0 | Verificar prefab EnemyProjectile: Rigidbody2D com Gravity Scale = 0 |
+| Projétil cai no chão | Gravity Scale != 0 | Alterar para 0 no Rigidbody2D do prefab |
+| Projétil acerta inimigos | _enemyLayer não configurado | No EnemyProjectile.cs: _enemyLayer deve ser "Enemy" (clicar no dropdown, marcar Enemy) |
+| Projétil não causa dano | Player não tem IDamageable ou layer errada | Verificar: Player tem PlayerHealth (que implementa IDamageable), Player está na layer Player |
+| Projétil não é destruído no chão | Layer check errado ou Ground não existe | Verificar: Collision Matrix permite EnemyProjectile↔Ground, chão está na layer Ground |
+| Ranged não atira | _projectilePrefab vazio | No EnemyController do EnemyRanged: arrastar EnemyProjectile.prefab para _projectilePrefab |
+| Ranged fica parado infinitamente | _noHitTimer não reseta | Comportamento esperado: após 5s sem acertar, ranged se reposiciona. Verificar EnemyProjectile chama _owner.OnProjectileHit() |
+| Heavy não faz charge | _chargeSpeed ou _chargeCooldown errados | Verificar valores: _chargeSpeed=8, _chargeCooldown=3, perto do player (< 3 unidades) |
+| Heavy nunca chega perto | _moveSpeed muito baixo | Heavy é lento (speed=1) — é comportamento esperado |
+| Fast parece igual a Melee | _enemyType não configurado | Abrir EnemyFast.prefab, verificar _enemyType = Fast |
+| Boss não spawna | _bossPrefabs[] vazio na arena | Verificar BossFloorHandler: _bossPrefabs[0] = Boss1/2/3.prefab |
+| Boss não faz nada | IBoss.Initialize() não é chamado | Verificar: prefab do boss tem o componente Boss correto (BossMelee/BossArea/BossHybridController) |
+| Boss não tem corpo físico | CircleCollider2D (physics) não existe | Adicionar segundo CircleCollider2D com Is Trigger = false |
+| Boss cai pelo chão | Sem collider físico ou layer errada | Verificar: CircleCollider2D Is Trigger = false, Layer = Enemy, Collision Matrix Enemy↔Ground = SIM |
+| Boss não dá dano | _playerLayer não configurado | Verificar: _playerLayer = Player em todos os scripts de boss |
+| Boss 1 não fica enraged | HP threshold errado ou condição | Enrage em 30% HP: _currentHealth <= _maxHealth * 0.3. Verificar _maxHealth |
+| Boss 2 não cria danger zones | _dangerZonePrefab vazio | Arrastar DangerZone.prefab para _dangerZonePrefab |
+| Danger zones infinitas | _maxDangerZones não configurado | Verificar _maxDangerZones = 5 |
+| Danger zone não causa dano | BoxCollider2D Is Trigger não é true | Marcar Is Trigger = true |
+| Boss 3 não muda de fase | _phaseTwoHPPercent errado | Verificar = 0.5 |
+| Boss 3 não atira spread | _projectilePrefab vazio | Arrastar EnemyProjectile.prefab |
+| Layer check não funciona em nenhum script | _playerLayer não configurado | Verificar TODOS os scripts que usam _playerLayer: EnemyController, BossMelee, BossArea, BossHybrid, RoomController |
+| NullReference ao spawnar inimigo | EnemyController não existe no prefab | Verificar: todos os prefabs de inimigo têm EnemyController.cs |
+| Inimigos todos melee | Prefabs novos não conectados | Verificar DungeonGenerator tem os 4 prefabs preenchidos |
+| Sala spawna só ranged | Regra de balanceamento quebrada | Verificar GetEnemyPrefabsForFloor(): Melee sempre está na pool antes dos outros |
+| Elite não é diferente | _isElite não está true | Abrir EliteEnemy.prefab, marcar _isElite = true |
+
+---
+
+### 15.21 Hierarquia Final dos Prefabs Criados
+
+```
+Assets/Prefabs/
+├── Enemy.prefab (atualizado)
+│   ├── _enemyType = Melee
+│   └── _playerLayer = Player
+├── EliteEnemy.prefab (atualizado)
+│   ├── _isElite = true
+│   └── _playerLayer = Player
+├── EnemyFast.prefab (novo)
+│   ├── _enemyType = Fast
+│   ├── _moveSpeed = 5, _maxHealth = 15
+│   └── Color: ciano, Scale 0.8
+├── EnemyHeavy.prefab (novo)
+│   ├── _enemyType = Heavy
+│   ├── _chargeSpeed = 8, _maxHealth = 90
+│   └── Color: laranja, Scale 1.5
+├── EnemyRanged.prefab (novo)
+│   ├── _enemyType = Ranged
+│   ├── _projectilePrefab = EnemyProjectile
+│   └── Color: roxo, Scale 0.9
+├── EnemyProjectile.prefab (novo)
+│   ├── Rigidbody2D (Gravity 0)
+│   ├── CircleCollider2D (trigger)
+│   ├── EnemyProjectile.cs
+│   └── Layer: EnemyProjectile
+├── DangerZone.prefab (novo)
+│   ├── SpriteRenderer (vermelho A:0.4, Scale 2x2)
+│   ├── BoxCollider2D (trigger, Size 2x2)
+│   └── DangerZone.cs
+├── Boss1.prefab (novo)
+│   ├── BossMeleeController.cs
+│   ├── 2× CircleCollider2D (trigger + physics)
+│   ├── Color: vermelho escuro, Scale 2.5
+│   └── Layer: Enemy
+├── Boss2.prefab (novo)
+│   ├── BossAreaController.cs
+│   ├── _dangerZonePrefab = DangerZone
+│   ├── _projectilePrefab = EnemyProjectile
+│   ├── Color: azul, Scale 2.5
+│   └── Layer: Enemy
+├── Boss3.prefab (novo)
+│   ├── BossHybridController.cs
+│   ├── _projectilePrefab = EnemyProjectile
+│   ├── Color: verde, Scale 2.5
+│   └── Layer: Enemy
+├── BossArena_5.prefab (atualizado)
+│   └── BossFloorHandler._bossPrefabs[0] = Boss1
+├── BossArena_10.prefab (atualizado)
+│   └── BossFloorHandler._bossPrefabs[0] = Boss2
+└── BossArena_15.prefab (atualizado)
+    └── BossFloorHandler._bossPrefabs[0] = Boss3
+```

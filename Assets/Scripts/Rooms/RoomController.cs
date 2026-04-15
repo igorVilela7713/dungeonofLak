@@ -8,6 +8,7 @@ public class RoomController : MonoBehaviour
     [Header("Spawn Settings")]
     [SerializeField] private Transform[] _spawnPoints;
     [SerializeField] private GameObject _enemyPrefab;
+    [SerializeField] private GameObject[] _enemyPrefabs;
 
     [Header("Elite Settings")]
     [SerializeField] private Transform _eliteSpawnPoint;
@@ -19,6 +20,7 @@ public class RoomController : MonoBehaviour
     [Header("References")]
     [SerializeField] private Transform _player;
     [SerializeField] private Transform _roomCenter;
+    [SerializeField] private LayerMask _playerLayer;
 
     private int _enemiesAlive;
     private bool _isActive;
@@ -52,6 +54,11 @@ public class RoomController : MonoBehaviour
         _enemyPrefab = prefab;
     }
 
+    public void SetEnemyPrefabs(GameObject[] prefabs)
+    {
+        _enemyPrefabs = prefabs;
+    }
+
     public void InitializeDoors(Door[] doors)
     {
         _doors = doors;
@@ -80,7 +87,7 @@ public class RoomController : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (_isActive) return;
-        if (other.gameObject.layer != LayerMask.NameToLayer("Player")) return;
+        if (((1 << other.gameObject.layer) & _playerLayer) == 0) return;
 
         _isActive = true;
         SpawnEnemies();
@@ -126,11 +133,18 @@ public class RoomController : MonoBehaviour
 
     private void SpawnCombatEnemies()
     {
-        if (_spawnPoints == null || _enemyPrefab == null) return;
+        GameObject prefabToSpawn = _enemyPrefab;
+
+        if (_enemyPrefabs != null && _enemyPrefabs.Length > 0)
+        {
+            prefabToSpawn = _enemyPrefabs[Random.Range(0, _enemyPrefabs.Length)];
+        }
+
+        if (prefabToSpawn == null || _spawnPoints == null) return;
 
         foreach (Transform point in _spawnPoints)
         {
-            GameObject enemy = Instantiate(_enemyPrefab, point.position, Quaternion.identity);
+            GameObject enemy = Instantiate(prefabToSpawn, point.position, Quaternion.identity);
 
             var controller = enemy.GetComponent<EnemyController>();
             if (controller != null)

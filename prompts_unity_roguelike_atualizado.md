@@ -26,6 +26,7 @@
 ## Etapa 1 — Research (Investigação)
 
 ### Quando usar
+
 Nova feature, sistema novo, refatoração significativa, integração nova, bug complexo,
 nova arma, novo inimigo, UI nova, save/load, câmera, dungeon, hub ou progressão.
 
@@ -109,9 +110,11 @@ Escreva o resultado em `PRD.md` seguindo EXATAMENTE esta estrutura:
 ```
 
 ### Output
+
 `PRD.md` preenchido com a investigação completa.
 
 ### Após esta etapa
+
 → Limpe o contexto (`/new`) e inicie a Etapa 2.
 
 ---
@@ -119,6 +122,7 @@ Escreva o resultado em `PRD.md` seguindo EXATAMENTE esta estrutura:
 ## Etapa 2 — Spec (Planejamento)
 
 ### Quando usar
+
 Sempre que houver um `PRD.md` pronto da Etapa 1.
 
 ### Prompt
@@ -200,6 +204,7 @@ a funcionalidade dentro da Unity passo a passo.
 ```
 
 ### Output
+
 `SPEC.md` com plano completo, checklist de tarefas e instruções de integração.
 
 ### Annotation Cycle (Ciclo de Anotação)
@@ -221,10 +226,11 @@ Não implemente nada ainda — apenas atualize o spec.
 </constraints>
 ```
 
-4. Repita até o plano estar correto
-5. Só então avance para a Etapa 3
+1. Repita até o plano estar correto
+2. Só então avance para a Etapa 3
 
 ### Após esta etapa
+
 → Limpe o contexto (`/new`) e inicie a Etapa 3.
 
 ---
@@ -232,6 +238,7 @@ Não implemente nada ainda — apenas atualize o spec.
 ## Etapa 3 — Code (Implementação)
 
 ### Quando usar
+
 Sempre que houver um `SPEC.md` pronto e aprovado.
 
 ### Prompt
@@ -284,9 +291,11 @@ Antes de declarar pronto, verifique:
 ```
 
 ### Output
+
 Código implementado, `SETUP.md` atualizado, pronto para teste no Unity.
 
 ### Após esta etapa
+
 - Se o spec foi alterado durante implementação → atualizar `SPEC.md`
 - Se houver nova convenção ou decisão importante → registrar no documento apropriado do projeto
 - Commitar apenas após validação humana
@@ -408,6 +417,82 @@ Leia o `PRD.md` e a implementação de referência acima.
 Gere o `SPEC.md` adotando abordagem similar, adaptada ao nosso projeto Unity.
 </instructions>
 ```
+
+---
+
+## ✅ Prompt melhorado (PT-BR)
+
+Agora que a nova fase foi finalizada, siga rigorosamente os passos abaixo:
+
+---
+
+### 1. Criar uma nova branch
+
+- O nome da branch deve refletir claramente a fase (usar nome descritivo)
+
+---
+
+### 2. Analisar as alterações
+
+- Identificar todos os arquivos modificados
+- Identificar todos os arquivos novos (criados)
+- Identificar alterações em documentação, specs ou PRD (se houver)
+
+---
+
+### 3. Criar commits seguindo estas regras
+
+#### a) Arquivos modificados
+
+- Agrupar arquivos modificados em um ou mais commits lógicos  
+- Utilizar mensagens de commit claras explicando o que foi alterado e o motivo  
+
+#### b) Arquivos novos
+
+- Devem ser commitados separadamente dos arquivos modificados  
+- Agrupar de forma lógica (ex: arquivos da mesma feature juntos)  
+
+#### c) Documentação / Specs / PRD
+
+- **DEVEM ser commitados separadamente**  
+- Inclui: arquivos de documentação, markdown, specs, PRD e qualquer artefato não relacionado diretamente ao código  
+- A mensagem do commit deve indicar claramente que são mudanças de documentação  
+
+#### d) Regras gerais
+
+- **NÃO misturar** arquivos novos, modificados e documentação no mesmo commit  
+- Manter commits pequenos, organizados e atômicos  
+- Seguir boas práticas de mensagens de commit (claras e objetivas)  
+
+---
+
+### 4. Consciência de código
+
+- Revisar a lógica existente antes de commitar  
+- Adicionar comentários no código quando necessário para explicar decisões  
+- Em caso de dúvida, **PERGUNTAR antes de executar qualquer ação**  
+
+---
+
+### 5. Pull Request
+
+- Após finalizar os commits, criar um PR  
+
+O PR deve conter:
+
+- Resumo da nova fase  
+- Principais mudanças realizadas  
+- Decisões técnicas importantes  
+- Pontos de atenção ou riscos  
+
+---
+
+### 6. Restrições importantes
+
+- **NÃO fazer push direto na main**  
+- **NÃO pular etapas**  
+- **NÃO criar um único commit com tudo**  
+- **NÃO commitar sem entender as mudanças**  
 
 ---
 

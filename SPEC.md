@@ -1288,10 +1288,10 @@ Adicionar seção **15** ao final:
 
 ### Bloco 1: Fundação
 
-- [ ] **1.1** Criar `Assets/Scripts/Enemies/EnemyType.cs`
-- [ ] **1.2** Criar `Assets/Scripts/Enemies/EnemyBase.cs`
-- [ ] **1.3** Criar `Assets/Scripts/Bosses/IBoss.cs`
-- [ ] **1.4** Refatorar `Assets/Scripts/Enemies/EnemyController.cs`
+- [x] **1.1** Criar `Assets/Scripts/Enemies/EnemyType.cs`
+- [x] **1.2** Criar `Assets/Scripts/Enemies/EnemyBase.cs`
+- [x] **1.3** Criar `Assets/Scripts/Bosses/IBoss.cs`
+- [x] **1.4** Refatorar `Assets/Scripts/Enemies/EnemyController.cs`
   - Herdar EnemyBase, remover lógica de vida/morte
   - Métodos isolados por tipo
   - LayerMask serializado (_playerLayer) em todos os layer checks
@@ -1301,11 +1301,11 @@ Adicionar seção **15** ao final:
 
 ### Bloco 2: Projétil e DangerZone
 
-- [ ] **2.1** Criar `Assets/Scripts/Enemies/EnemyProjectile.cs`
+- [x] **2.1** Criar `Assets/Scripts/Enemies/EnemyProjectile.cs`
   - Rigidbody2D velocity
   - Ignora Enemy layer
   - Reseta _noHitTimer do owner ao acertar
-- [ ] **2.2** Criar `Assets/Scripts/Bosses/DangerZone.cs`
+- [x] **2.2** Criar `Assets/Scripts/Bosses/DangerZone.cs`
 - [ ] **2.3** Criar prefab EnemyProjectile
 - [ ] **2.4** Criar prefab DangerZone
 
@@ -1319,22 +1319,22 @@ Adicionar seção **15** ao final:
 
 ### Bloco 4: Integração
 
-- [ ] **4.1** Modificar RoomController.cs
-- [ ] **4.2** Modificar DungeonGenerator.cs
+- [x] **4.1** Modificar RoomController.cs
+- [x] **4.2** Modificar DungeonGenerator.cs
 - [ ] **4.3** Atualizar cena Main
 
 ### Bloco 5: Bosses
 
-- [ ] **5.1** Criar BossMeleeController.cs (flag _isActive)
-- [ ] **5.2** Criar BossAreaController.cs (limite _maxDangerZones)
-- [ ] **5.3** Criar BossHybridController.cs (flag _isActive)
+- [x] **5.1** Criar BossMeleeController.cs (flag _isActive)
+- [x] **5.2** Criar BossAreaController.cs (limite _maxDangerZones)
+- [x] **5.3** Criar BossHybridController.cs (flag _isActive)
 - [ ] **5.4** Criar prefabs Boss1, Boss2, Boss3
-- [ ] **5.5** Modificar BossFloorHandler.cs (IBoss)
+- [x] **5.5** Modificar BossFloorHandler.cs (IBoss)
 - [ ] **5.6** Atualizar arena prefabs
 
 ### Bloco 6: SETUP.md
 
-- [ ] **6.1** Adicionar seção 15
+- [x] **6.1** Adicionar seção 15
 
 ### Bloco 7: Testes
 
@@ -1357,15 +1357,15 @@ Adicionar seção **15** ao final:
 
 ## Validação
 
-- [ ] Scripts compilam sem erro
-- [ ] EnemyBase compartilhada entre todos os inimigos
-- [ ] IBoss usado no BossFloorHandler
-- [ ] Projétil usa Rigidbody2D velocity
-- [ ] Todos os layer checks padronizados (LayerMask serializado)
-- [ ] EnemyProjectile ignora Enemy layer e reseta _noHitTimer
-- [ ] DangerZone com limite de instâncias no Boss2
-- [ ] Flag _isActive em todos os bosses
-- [ ] SETUP.md atualizado
+- [x] Scripts compilam sem erro
+- [x] EnemyBase compartilhada entre todos os inimigos
+- [x] IBoss usado no BossFloorHandler
+- [x] Projétil usa Rigidbody2D velocity
+- [x] Todos os layer checks padronizados (LayerMask serializado)
+- [x] EnemyProjectile ignora Enemy layer e reseta _noHitTimer
+- [x] DangerZone com limite de instâncias no Boss2
+- [x] Flag _isActive em todos os bosses
+- [x] SETUP.md atualizado
 - [ ] Testável em Play Mode
 
 ---
